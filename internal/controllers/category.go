@@ -5,17 +5,59 @@ import (
 	"encoding/json"
 	"flashcard_lambda/internal/constants"
 	"flashcard_lambda/internal/models"
+	"flashcard_lambda/internal/persistence"
 	"flashcard_lambda/internal/utils"
 	"log"
 	"net/http"
 
 	"github.com/aws/aws-lambda-go/events"
-	"github.com/aws/aws-sdk-go-v2/aws"
-	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"github.com/google/uuid"
 	"gopkg.in/go-playground/validator.v9"
 )
+
+func GetCategories(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
+	categories, err := categoryDAO.GetCategories(ctx, req.RequestContext.Stage)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+
+	body, err := json.Marshal(categories)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(body),
+		Headers:    constants.CORS_HEADERS,
+	}, nil
+}
+
+func GetCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	id, ok := req.QueryStringParameters["id"]
+	if !ok {
+		return utils.ClientError(http.StatusBadRequest)
+	}
+	log.Printf("Received GET profile request with id = %s", id)
+
+	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
+	category, err := categoryDAO.GetCategory(ctx, id, req.RequestContext.Stage)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+
+	body, err := json.Marshal(category)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(body),
+		Headers:    constants.CORS_HEADERS,
+	}, nil
+}
 
 func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	var createCategoryRequest models.CreateCategoryRequest
@@ -32,8 +74,8 @@ func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, d
 	}
 	log.Printf("Received POST request with new category: %+v", createCategoryRequest)
 
-	isDev := req.RequestContext.Stage == "dev"
-	res, err := insertCategory(ctx, createCategoryRequest, db, isDev)
+	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
+	res, err := categoryDAO.InsertCategory(ctx, createCategoryRequest, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -52,34 +94,69 @@ func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, d
 
 }
 
-func insertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, db dynamodb.Client, isDev bool) (*models.Category, error) {
-	category := models.Category{
-		Id:          uuid.NewString(),
-		Name:        createCategory.Name,
-		Description: createCategory.Description,
+func UpdateCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	id, ok := req.QueryStringParameters["id"]
+	if !ok {
+		return utils.ClientError(http.StatusBadRequest)
+	}
+	var updateProfileRquest models.UpdateCategoryRequest
+	err := json.Unmarshal([]byte(req.Body), &updateProfileRquest)
+	if err != nil {
+		log.Printf("Can't unmarshal body: %v", err)
+		return utils.ClientError(http.StatusUnprocessableEntity)
+	}
+	log.Printf("Received PUT request with category: %+v", updateProfileRquest)
+
+	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
+	res, err := categoryDAO.UpdateCategory(ctx, id, updateProfileRquest, req.RequestContext.Stage)
+	if err != nil {
+		return utils.ServerError(err)
 	}
 
-	item, err := attributevalue.MarshalMap(category)
-	if err != nil {
-		return nil, err
-	}
-	dbName := constants.DYNAMODB_NAME
-	if isDev {
-		dbName = constants.DYNAMODB_NAME_DEV
-	}
-	input := &dynamodb.PutItemInput{
-		TableName: aws.String(dbName),
-		Item:      item,
-	}
-	res, err := db.PutItem(ctx, input)
-	if err != nil {
-		return nil, err
+	if res == nil {
+		return utils.ClientError(http.StatusNotFound)
 	}
 
-	err = attributevalue.UnmarshalMap(res.Attributes, &category)
+	log.Printf("Updated category: %+v", res)
+
+	json, err := json.Marshal(res)
 	if err != nil {
-		return nil, err
+		return utils.ServerError(err)
 	}
 
-	return &category, nil
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(json),
+		Headers:    constants.CORS_HEADERS,
+	}, nil
+}
+
+func DeleteCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	id, ok := req.QueryStringParameters["id"]
+	if !ok {
+		return utils.ClientError(http.StatusBadRequest)
+	}
+	log.Printf("Received DELETE request with id = %s", id)
+
+	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
+	category, err := categoryDAO.DeleteCategory(ctx, id, req.RequestContext.Stage)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+
+	if category == nil {
+		return utils.ClientError(http.StatusNotFound)
+	}
+
+	json, err := json.Marshal(category)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+	log.Printf("Successfully deleted category %+v", category)
+
+	return events.APIGatewayProxyResponse{
+		StatusCode: http.StatusOK,
+		Body:       string(json),
+		Headers:    constants.CORS_HEADERS,
+	}, nil
 }

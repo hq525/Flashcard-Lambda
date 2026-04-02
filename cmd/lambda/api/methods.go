@@ -16,6 +16,8 @@ func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 	path := req.Path
 	var err error
 	switch path {
+	case "/categories":
+		return controllers.GetCategories(ctx, req, db)
 	default:
 		responseBody := constants.DefaultResponseBody{
 			Message: "Invalid route",
