@@ -34,6 +34,12 @@ func HandleRequest(ctx context.Context, req events.APIGatewayProxyRequest) (even
 	switch req.HTTPMethod {
 	case "GET":
 		return api.ProcessGet(ctx, req, db)
+	case "POST":
+		return api.ProcessPost(ctx, req, db)
+	case "PUT":
+		return api.ProcessPut(ctx, req, db)
+	case "DELETE":
+		return api.ProcessDelete(ctx, req, db)
 	default:
 		return utils.ClientError(http.StatusMethodNotAllowed)
 	}

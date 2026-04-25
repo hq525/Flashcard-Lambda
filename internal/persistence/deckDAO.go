@@ -3,7 +3,6 @@ package persistence
 import (
 	"context"
 	"errors"
-	"log"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/feature/dynamodb/attributevalue"
@@ -16,44 +15,54 @@ import (
 	"flashcard_lambda/internal/models"
 )
 
-type ICategoryDataAccessObject interface {
-	GetCategories(ctx context.Context, stage string) ([]models.Category, error)
-	GetCategory(ctx context.Context, id string, stage string) (*models.Category, error)
-	InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, stage string) (*models.Category, error)
-	UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest, stage string) (*models.Category, error)
-	DeleteCategory(ctx context.Context, id string, stage string) (*models.Category, error)
+type IDeckDataAccessObject interface {
+	GetDecks(ctx context.Context, categoryId string, stage string) ([]models.Deck, error)
+	GetDeck(ctx context.Context, id string, stage string) (*models.Deck, error)
+	InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest, stage string) (*models.Deck, error)
+	UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest, stage string) (*models.Deck, error)
+	DeleteDeck(ctx context.Context, id string, stage string) (*models.Deck, error)
 }
 
-type CategoryDataAccessObject struct {
+type DeckDataAccessObject struct {
 	db *dynamodb.Client
 }
 
-func NewCategoryDataAccessObject(db *dynamodb.Client) ICategoryDataAccessObject {
-	return &CategoryDataAccessObject{
+func NewDeckDataAccessObject(db *dynamodb.Client) IDeckDataAccessObject {
+	return &DeckDataAccessObject{
 		db: db,
 	}
 }
 
-const filterCategories = "attribute_not_exists(set_id) AND attribute_not_exists(category_id)"
-
-func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, stage string) ([]models.Category, error) {
-	input := &dynamodb.ScanInput{
-		TableName:        aws.String(constants.GetDBName(stage)),
-		FilterExpression: aws.String(filterCategories),
+func (deckDAO *DeckDataAccessObject) GetDecks(ctx context.Context, categoryId string, stage string) ([]models.Deck, error) {
+	expr, err := expression.NewBuilder().WithFilter(
+		expression.Equal(
+			expression.Name("category_id"),
+			expression.Value(categoryId),
+		),
+	).Build()
+	if err != nil {
+		return nil, err
 	}
 
-	var categories []models.Category
+	input := &dynamodb.ScanInput{
+		TableName:                 aws.String(constants.GetDBName(stage)),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+	}
+
+	var decks []models.Deck
 	for {
-		res, err := categoryDAO.db.Scan(ctx, input)
+		res, err := deckDAO.db.Scan(ctx, input)
 		if err != nil {
 			return nil, err
 		}
 
-		var page []models.Category
+		var page []models.Deck
 		if err = attributevalue.UnmarshalListOfMaps(res.Items, &page); err != nil {
 			return nil, err
 		}
-		categories = append(categories, page...)
+		decks = append(decks, page...)
 
 		if res.LastEvaluatedKey == nil {
 			break
@@ -61,10 +70,10 @@ func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, 
 		input.ExclusiveStartKey = res.LastEvaluatedKey
 	}
 
-	return categories, nil
+	return decks, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id string, stage string) (*models.Category, error) {
+func (deckDAO *DeckDataAccessObject) GetDeck(ctx context.Context, id string, stage string) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -77,61 +86,62 @@ func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id
 		},
 	}
 
-	log.Printf("Calling Dynamodb with input: %v", input)
-	result, err := categoryDAO.db.GetItem(ctx, input)
+	result, err := deckDAO.db.GetItem(ctx, input)
 	if err != nil {
 		return nil, err
 	}
-	log.Printf("Executed GetItem DynamoDb successfully. Result: %#v", result)
 
 	if result.Item == nil {
 		return nil, nil
 	}
 
-	category := new(models.Category)
-	err = attributevalue.UnmarshalMap(result.Item, category)
+	deck := new(models.Deck)
+	err = attributevalue.UnmarshalMap(result.Item, deck)
 	if err != nil {
 		return nil, err
 	}
 
-	return category, nil
+	return deck, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, stage string) (*models.Category, error) {
-	category := models.Category{
+func (deckDAO *DeckDataAccessObject) InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest, stage string) (*models.Deck, error) {
+	deck := models.Deck{
 		Id:          uuid.NewString(),
-		Name:        createCategory.Name,
-		Description: createCategory.Description,
+		CategoryId:  createDeck.CategoryId,
+		Name:        createDeck.Name,
+		Description: createDeck.Description,
 	}
 
-	item, err := attributevalue.MarshalMap(category)
+	item, err := attributevalue.MarshalMap(deck)
 	if err != nil {
 		return nil, err
 	}
+
 	input := &dynamodb.PutItemInput{
 		TableName: aws.String(constants.GetDBName(stage)),
 		Item:      item,
 	}
-	_, err = categoryDAO.db.PutItem(ctx, input)
+	_, err = deckDAO.db.PutItem(ctx, input)
 	if err != nil {
 		return nil, err
 	}
 
-	return &category, nil
+	return &deck, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest, stage string) (*models.Category, error) {
+func (deckDAO *DeckDataAccessObject) UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest, stage string) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
+
 	expr, err := expression.NewBuilder().WithUpdate(
 		expression.Set(
 			expression.Name("name"),
-			expression.Value(updateCategory.Name),
+			expression.Value(updateDeck.Name),
 		).Set(
 			expression.Name("description"),
-			expression.Value(updateCategory.Description),
+			expression.Value(updateDeck.Description),
 		),
 	).WithCondition(
 		expression.Equal(
@@ -155,7 +165,7 @@ func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context,
 		ReturnValues:              dynamodbTypes.ReturnValueAllNew,
 	}
 
-	res, err := categoryDAO.db.UpdateItem(ctx, input)
+	res, err := deckDAO.db.UpdateItem(ctx, input)
 	if err != nil {
 		var condCheckFailed *dynamodbTypes.ConditionalCheckFailedException
 		if errors.As(err, &condCheckFailed) {
@@ -167,16 +177,17 @@ func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context,
 	if res.Attributes == nil {
 		return nil, nil
 	}
-	category := new(models.Category)
-	err = attributevalue.UnmarshalMap(res.Attributes, category)
+
+	deck := new(models.Deck)
+	err = attributevalue.UnmarshalMap(res.Attributes, deck)
 	if err != nil {
 		return nil, err
 	}
 
-	return category, nil
+	return deck, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) DeleteCategory(ctx context.Context, id string, stage string) (*models.Category, error) {
+func (deckDAO *DeckDataAccessObject) DeleteDeck(ctx context.Context, id string, stage string) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -190,7 +201,7 @@ func (categoryDAO *CategoryDataAccessObject) DeleteCategory(ctx context.Context,
 		ReturnValues: dynamodbTypes.ReturnValueAllOld,
 	}
 
-	res, err := categoryDAO.db.DeleteItem(ctx, input)
+	res, err := deckDAO.db.DeleteItem(ctx, input)
 	if err != nil {
 		return nil, err
 	}
@@ -199,11 +210,11 @@ func (categoryDAO *CategoryDataAccessObject) DeleteCategory(ctx context.Context,
 		return nil, nil
 	}
 
-	category := new(models.Category)
-	err = attributevalue.UnmarshalMap(res.Attributes, category)
+	deck := new(models.Deck)
+	err = attributevalue.UnmarshalMap(res.Attributes, deck)
 	if err != nil {
 		return nil, err
 	}
 
-	return category, nil
+	return deck, nil
 }

@@ -12,21 +12,23 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
-	"gopkg.in/go-playground/validator.v9"
 )
 
-var validate = validator.New()
+func GetDecks(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	categoryId, ok := req.QueryStringParameters["categoryId"]
+	if !ok {
+		return utils.ClientError(http.StatusBadRequest)
+	}
+	log.Printf("Received GET decks request for categoryId = %s", categoryId)
 
-func GetCategories(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	log.Printf("Received GET categories request")
-	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	categories, err := categoryDAO.GetCategories(ctx, req.RequestContext.Stage)
+	deckDAO := persistence.NewDeckDataAccessObject(&db)
+	decks, err := deckDAO.GetDecks(ctx, categoryId, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Retrieved %d categories", len(categories))
+	log.Printf("Retrieved %d decks", len(decks))
 
-	body, err := json.Marshal(categories)
+	body, err := json.Marshal(decks)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -38,20 +40,20 @@ func GetCategories(ctx context.Context, req events.APIGatewayProxyRequest, db dy
 	}, nil
 }
 
-func GetCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func GetDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	log.Printf("Received GET category request with id = %s", id)
+	log.Printf("Received GET deck request with id = %s", id)
 
-	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	category, err := categoryDAO.GetCategory(ctx, id, req.RequestContext.Stage)
+	deckDAO := persistence.NewDeckDataAccessObject(&db)
+	deck, err := deckDAO.GetDeck(ctx, id, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
 
-	body, err := json.Marshal(category)
+	body, err := json.Marshal(deck)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -63,26 +65,27 @@ func GetCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dyna
 	}, nil
 }
 
-func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	var createCategoryRequest models.CreateCategoryRequest
-	err := json.Unmarshal([]byte(req.Body), &createCategoryRequest)
+func CreateNewDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	var createDeckRequest models.CreateDeckRequest
+	err := json.Unmarshal([]byte(req.Body), &createDeckRequest)
 	if err != nil {
 		log.Printf("Can't unmarshal body: %v", err)
 		return utils.ClientError(http.StatusUnprocessableEntity)
 	}
-	err = validate.Struct(&createCategoryRequest)
+
+	err = validate.Struct(&createDeckRequest)
 	if err != nil {
 		log.Printf("Invalid body: %v", err)
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	log.Printf("Received POST request with new category: %+v", createCategoryRequest)
+	log.Printf("Received POST request with new deck: %+v", createDeckRequest)
 
-	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	res, err := categoryDAO.InsertCategory(ctx, createCategoryRequest, req.RequestContext.Stage)
+	deckDAO := persistence.NewDeckDataAccessObject(&db)
+	res, err := deckDAO.InsertDeck(ctx, createDeckRequest, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Inserted new category: %+v", res)
+	log.Printf("Inserted new deck: %+v", res)
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -94,24 +97,24 @@ func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, d
 		Body:       string(body),
 		Headers:    constants.CORS_HEADERS,
 	}, nil
-
 }
 
-func UpdateCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func UpdateDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	var updateCategoryRequest models.UpdateCategoryRequest
-	err := json.Unmarshal([]byte(req.Body), &updateCategoryRequest)
+
+	var updateDeckRequest models.UpdateDeckRequest
+	err := json.Unmarshal([]byte(req.Body), &updateDeckRequest)
 	if err != nil {
 		log.Printf("Can't unmarshal body: %v", err)
 		return utils.ClientError(http.StatusUnprocessableEntity)
 	}
-	log.Printf("Received PUT request with category: %+v", updateCategoryRequest)
+	log.Printf("Received PUT request with deck: %+v", updateDeckRequest)
 
-	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	res, err := categoryDAO.UpdateCategory(ctx, id, updateCategoryRequest, req.RequestContext.Stage)
+	deckDAO := persistence.NewDeckDataAccessObject(&db)
+	res, err := deckDAO.UpdateDeck(ctx, id, updateDeckRequest, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -120,7 +123,7 @@ func UpdateCategory(ctx context.Context, req events.APIGatewayProxyRequest, db d
 		return utils.ClientError(http.StatusNotFound)
 	}
 
-	log.Printf("Updated category: %+v", res)
+	log.Printf("Updated deck: %+v", res)
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -134,28 +137,28 @@ func UpdateCategory(ctx context.Context, req events.APIGatewayProxyRequest, db d
 	}, nil
 }
 
-func DeleteCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func DeleteDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
 	log.Printf("Received DELETE request with id = %s", id)
 
-	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	category, err := categoryDAO.DeleteCategory(ctx, id, req.RequestContext.Stage)
+	deckDAO := persistence.NewDeckDataAccessObject(&db)
+	deck, err := deckDAO.DeleteDeck(ctx, id, req.RequestContext.Stage)
 	if err != nil {
 		return utils.ServerError(err)
 	}
 
-	if category == nil {
+	if deck == nil {
 		return utils.ClientError(http.StatusNotFound)
 	}
 
-	body, err := json.Marshal(category)
+	body, err := json.Marshal(deck)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Successfully deleted category %+v", category)
+	log.Printf("Successfully deleted deck %+v", deck)
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,
