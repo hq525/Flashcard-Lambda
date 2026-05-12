@@ -20,3 +20,13 @@ type UpdateDeckRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
+
+type CreateTagRequest struct {
+	Name        string `json:"name" validate:"required"`
+	Description string `json:"description"`
+}
+
+type UpdateTagRequest struct {
+	Name        string `json:"name"`
+	Description string `json:"description"`
+}

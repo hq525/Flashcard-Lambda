@@ -24,84 +24,10 @@ func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 		return controllers.GetDecks(ctx, req, db)
 	case "/deck":
 		return controllers.GetDeck(ctx, req, db)
-	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
-}
-
-func ProcessPut(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
-	case "/category":
-		return controllers.UpdateCategory(ctx, req, db)
-	case "/deck":
-		return controllers.UpdateDeck(ctx, req, db)
-	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
-}
-
-func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
-	case "/category":
-		return controllers.DeleteCategory(ctx, req, db)
-	case "/deck":
-		return controllers.DeleteDeck(ctx, req, db)
+	case "/tags":
+		return controllers.GetTags(ctx, req, db)
+	case "/tag":
+		return controllers.GetTag(ctx, req, db)
 	default:
 		responseBody := constants.DefaultResponseBody{
 			Message: "Invalid route",
@@ -141,6 +67,90 @@ func ProcessPost(ctx context.Context, req events.APIGatewayProxyRequest, db dyna
 		return controllers.CreateNewCategory(ctx, req, db)
 	case "/deck":
 		return controllers.CreateNewDeck(ctx, req, db)
+	case "/tag":
+		return controllers.CreateNewTag(ctx, req, db)
+	default:
+		responseBody := constants.DefaultResponseBody{
+			Message: "Invalid route",
+		}
+		jbytes, err := json.Marshal(responseBody)
+		if err != nil {
+			log.Fatal(err)
+		}
+		jstr := string(jbytes)
+		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+	}
+
+	if err != nil {
+		responseBody := constants.DefaultResponseBody{
+			Message: err.Error(),
+		}
+		jbytes, _ := json.Marshal(responseBody)
+		jstr := string(jbytes)
+		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+	}
+	var headers = constants.CORS_HEADERS
+
+	corsApiResponse := events.APIGatewayProxyResponse{
+		Body:       ApiResponse.Body,
+		StatusCode: ApiResponse.StatusCode,
+		Headers:    headers,
+	}
+	return corsApiResponse, nil
+}
+
+func ProcessPut(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	ApiResponse := events.APIGatewayProxyResponse{}
+	path := req.Path
+	var err error
+	switch path {
+	case "/category":
+		return controllers.UpdateCategory(ctx, req, db)
+	case "/deck":
+		return controllers.UpdateDeck(ctx, req, db)
+	case "/tag":
+		return controllers.UpdateTag(ctx, req, db)
+	default:
+		responseBody := constants.DefaultResponseBody{
+			Message: "Invalid route",
+		}
+		jbytes, err := json.Marshal(responseBody)
+		if err != nil {
+			log.Fatal(err)
+		}
+		jstr := string(jbytes)
+		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+	}
+
+	if err != nil {
+		responseBody := constants.DefaultResponseBody{
+			Message: err.Error(),
+		}
+		jbytes, _ := json.Marshal(responseBody)
+		jstr := string(jbytes)
+		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+	}
+	var headers = constants.CORS_HEADERS
+
+	corsApiResponse := events.APIGatewayProxyResponse{
+		Body:       ApiResponse.Body,
+		StatusCode: ApiResponse.StatusCode,
+		Headers:    headers,
+	}
+	return corsApiResponse, nil
+}
+
+func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	ApiResponse := events.APIGatewayProxyResponse{}
+	path := req.Path
+	var err error
+	switch path {
+	case "/category":
+		return controllers.DeleteCategory(ctx, req, db)
+	case "/deck":
+		return controllers.DeleteDeck(ctx, req, db)
+	case "/tag":
+		return controllers.DeleteTag(ctx, req, db)
 	default:
 		responseBody := constants.DefaultResponseBody{
 			Message: "Invalid route",
