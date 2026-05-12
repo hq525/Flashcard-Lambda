@@ -34,12 +34,22 @@ func NewCategoryDataAccessObject(db *dynamodb.Client) ICategoryDataAccessObject 
 	}
 }
 
-const filterCategories = "attribute_not_exists(set_id) AND attribute_not_exists(category_id)"
-
 func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, stage string) ([]models.Category, error) {
+	expr, err := expression.NewBuilder().WithFilter(
+		expression.Equal(
+			expression.Name("entity_type"),
+			expression.Value("category"),
+		),
+	).Build()
+	if err != nil {
+		return nil, err
+	}
+
 	input := &dynamodb.ScanInput{
-		TableName:        aws.String(constants.GetDBName(stage)),
-		FilterExpression: aws.String(filterCategories),
+		TableName:                 aws.String(constants.GetDBName(stage)),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
 	}
 
 	var categories []models.Category
@@ -100,6 +110,7 @@ func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id
 func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, stage string) (*models.Category, error) {
 	category := models.Category{
 		Id:          uuid.NewString(),
+		EntityType:  "category",
 		Name:        createCategory.Name,
 		Description: createCategory.Description,
 	}

@@ -2,6 +2,7 @@ package models
 
 type Category struct {
 	Id          string `json:"id" dynamodbav:"id"`
+	EntityType  string `json:"entityType" dynamodbav:"entity_type"`
 	Name        string `json:"name" dynamodbav:"name"`
 	Description string `json:"description" dynamodbav:"description"`
 }
@@ -26,6 +27,7 @@ type Card struct {
 
 type Tag struct {
 	Id          string `json:"id" dynamodbav:"id"`
+	EntityType  string `json:"entityType" dynamodbav:"entity_type"`
 	Name        string `json:"name" dynamodbav:"name"`
 	Description string `json:"description" dynamodbav:"description"`
 }

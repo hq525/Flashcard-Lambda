@@ -34,8 +34,21 @@ func NewTagDataAccessObject(db *dynamodb.Client) ITagDataAccessObject {
 }
 
 func (tagDAO *TagDataAccessObject) GetTags(ctx context.Context, stage string) ([]models.Tag, error) {
+	expr, err := expression.NewBuilder().WithFilter(
+		expression.Equal(
+			expression.Name("entity_type"),
+			expression.Value("tag"),
+		),
+	).Build()
+	if err != nil {
+		return nil, err
+	}
+
 	input := &dynamodb.ScanInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName(stage)),
+		FilterExpression:          expr.Filter(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
 	}
 
 	var tags []models.Tag
@@ -94,6 +107,7 @@ func (tagDAO *TagDataAccessObject) GetTag(ctx context.Context, id string, stage 
 func (tagDAO *TagDataAccessObject) InsertTag(ctx context.Context, createTag models.CreateTagRequest, stage string) (*models.Tag, error) {
 	tag := models.Tag{
 		Id:          uuid.NewString(),
+		EntityType:  "tag",
 		Name:        createTag.Name,
 		Description: createTag.Description,
 	}
