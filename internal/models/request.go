@@ -30,3 +30,16 @@ type UpdateTagRequest struct {
 	Name        string `json:"name"`
 	Description string `json:"description"`
 }
+
+type CreateCardAnswerSectionRequest struct {
+	CardId         string `json:"cardID" validate:"required"`
+	SequenceNumber uint16 `json:"sequenceNumber" validate:"required"`
+	Title          string `json:"title"`
+	Answer         string `json:"answer"`
+}
+
+type UpdateCardAnswerSectionRequest struct {
+	SequenceNumber uint16 `json:"sequenceNumber"`
+	Title          string `json:"title"`
+	Answer         string `json:"answer"`
+}

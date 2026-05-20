@@ -11,172 +11,89 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
+const (
+	routeCategory          = "/category"
+	routeDeck              = "/deck"
+	routeTag               = "/tag"
+	routeCardAnswerSection = "/card-answer-section"
+)
+
+func invalidRoute() events.APIGatewayProxyResponse {
+	jbytes, err := json.Marshal(constants.DefaultResponseBody{Message: "Invalid route"})
+	if err != nil {
+		log.Fatal(err)
+	}
+	return events.APIGatewayProxyResponse{
+		Body:       string(jbytes),
+		StatusCode: 400,
+		Headers:    constants.CORS_HEADERS,
+	}
+}
+
 func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
+	switch req.Path {
 	case "/categories":
 		return controllers.GetCategories(ctx, req, db)
-	case "/category":
+	case routeCategory:
 		return controllers.GetCategory(ctx, req, db)
 	case "/decks":
 		return controllers.GetDecks(ctx, req, db)
-	case "/deck":
+	case routeDeck:
 		return controllers.GetDeck(ctx, req, db)
 	case "/tags":
 		return controllers.GetTags(ctx, req, db)
-	case "/tag":
+	case routeTag:
 		return controllers.GetTag(ctx, req, db)
+	case "/card-answer-sections":
+		return controllers.GetCardAnswerSections(ctx, req, db)
+	case routeCardAnswerSection:
+		return controllers.GetCardAnswerSection(ctx, req, db)
 	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+		return invalidRoute(), nil
 	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
 }
 
 func ProcessPost(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
-	case "/category":
+	switch req.Path {
+	case routeCategory:
 		return controllers.CreateNewCategory(ctx, req, db)
-	case "/deck":
+	case routeDeck:
 		return controllers.CreateNewDeck(ctx, req, db)
-	case "/tag":
+	case routeTag:
 		return controllers.CreateNewTag(ctx, req, db)
+	case routeCardAnswerSection:
+		return controllers.CreateNewCardAnswerSection(ctx, req, db)
 	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+		return invalidRoute(), nil
 	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
 }
 
 func ProcessPut(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
-	case "/category":
+	switch req.Path {
+	case routeCategory:
 		return controllers.UpdateCategory(ctx, req, db)
-	case "/deck":
+	case routeDeck:
 		return controllers.UpdateDeck(ctx, req, db)
-	case "/tag":
+	case routeTag:
 		return controllers.UpdateTag(ctx, req, db)
+	case routeCardAnswerSection:
+		return controllers.UpdateCardAnswerSection(ctx, req, db)
 	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+		return invalidRoute(), nil
 	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
 }
 
 func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	ApiResponse := events.APIGatewayProxyResponse{}
-	path := req.Path
-	var err error
-	switch path {
-	case "/category":
+	switch req.Path {
+	case routeCategory:
 		return controllers.DeleteCategory(ctx, req, db)
-	case "/deck":
+	case routeDeck:
 		return controllers.DeleteDeck(ctx, req, db)
-	case "/tag":
+	case routeTag:
 		return controllers.DeleteTag(ctx, req, db)
+	case routeCardAnswerSection:
+		return controllers.DeleteCardAnswerSection(ctx, req, db)
 	default:
-		responseBody := constants.DefaultResponseBody{
-			Message: "Invalid route",
-		}
-		jbytes, err := json.Marshal(responseBody)
-		if err != nil {
-			log.Fatal(err)
-		}
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
+		return invalidRoute(), nil
 	}
-
-	if err != nil {
-		responseBody := constants.DefaultResponseBody{
-			Message: err.Error(),
-		}
-		jbytes, _ := json.Marshal(responseBody)
-		jstr := string(jbytes)
-		ApiResponse = events.APIGatewayProxyResponse{Body: jstr, StatusCode: 400}
-	}
-	var headers = constants.CORS_HEADERS
-
-	corsApiResponse := events.APIGatewayProxyResponse{
-		Body:       ApiResponse.Body,
-		StatusCode: ApiResponse.StatusCode,
-		Headers:    headers,
-	}
-	return corsApiResponse, nil
 }
