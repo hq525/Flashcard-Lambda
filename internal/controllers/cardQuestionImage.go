@@ -9,9 +9,13 @@ import (
 	"flashcard_lambda/internal/utils"
 	"log"
 	"net/http"
+	"net/url"
+	"strings"
 
 	"github.com/aws/aws-lambda-go/events"
+	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 func GetCardQuestionImages(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
@@ -137,7 +141,7 @@ func UpdateCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequ
 	}, nil
 }
 
-func DeleteCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func DeleteCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client, s3Client s3.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
@@ -153,6 +157,20 @@ func DeleteCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequ
 	if image == nil {
 		return utils.ClientError(http.StatusNotFound)
 	}
+
+	parsed, err := url.Parse(image.ImageURL)
+	if err != nil {
+		return utils.ServerError(err)
+	}
+	key := strings.TrimPrefix(parsed.Path, "/")
+	_, err = s3Client.DeleteObject(ctx, &s3.DeleteObjectInput{
+		Bucket: aws.String(constants.GetBucketName()),
+		Key:    aws.String(key),
+	})
+	if err != nil {
+		return utils.ServerError(err)
+	}
+	log.Printf("Deleted S3 object %s", key)
 
 	body, err := json.Marshal(image)
 	if err != nil {

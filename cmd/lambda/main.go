@@ -42,7 +42,7 @@ func HandleRequest(ctx context.Context, req events.APIGatewayProxyRequest) (even
 	case "PUT":
 		return api.ProcessPut(ctx, req, db)
 	case "DELETE":
-		return api.ProcessDelete(ctx, req, db)
+		return api.ProcessDelete(ctx, req, db, s3Client)
 	default:
 		return utils.ClientError(http.StatusMethodNotAllowed)
 	}

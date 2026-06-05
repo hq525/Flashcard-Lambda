@@ -96,7 +96,7 @@ func ProcessPut(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 	}
 }
 
-func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client, s3Client s3.Client) (events.APIGatewayProxyResponse, error) {
 	switch req.Path {
 	case routeCategory:
 		return controllers.DeleteCategory(ctx, req, db)
@@ -107,7 +107,7 @@ func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dy
 	case routeCardAnswerSection:
 		return controllers.DeleteCardAnswerSection(ctx, req, db)
 	case routeCardQuestionImage:
-		return controllers.DeleteCardQuestionImage(ctx, req, db)
+		return controllers.DeleteCardQuestionImage(ctx, req, db, s3Client)
 	default:
 		return invalidRoute(), nil
 	}
