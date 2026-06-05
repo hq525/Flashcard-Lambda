@@ -43,3 +43,14 @@ type UpdateCardAnswerSectionRequest struct {
 	Title          string `json:"title"`
 	Answer         string `json:"answer"`
 }
+
+type CreateCardQuestionImageRequest struct {
+	CardId         string `json:"cardID" validate:"required"`
+	SequenceNumber uint16 `json:"sequenceNumber" validate:"required"`
+	ImageURL       string `json:"imageURL" validate:"required"`
+}
+
+type UpdateCardQuestionImageRequest struct {
+	SequenceNumber uint16 `json:"sequenceNumber"`
+	ImageURL       string `json:"imageURL"`
+}

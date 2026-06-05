@@ -14,21 +14,21 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 )
 
-func GetDecks(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	categoryId, ok := req.QueryStringParameters["categoryId"]
+func GetCardQuestionImages(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	cardId, ok := req.QueryStringParameters["cardId"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	log.Printf("Received GET decks request for categoryId = %s", categoryId)
+	log.Printf("Received GET card question images request for cardId = %s", cardId)
 
-	deckDAO := persistence.NewDeckDataAccessObject(&db)
-	decks, err := deckDAO.GetDecks(ctx, categoryId)
+	dao := persistence.NewCardQuestionImageDataAccessObject(&db)
+	images, err := dao.GetCardQuestionImages(ctx, cardId)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Retrieved %d decks", len(decks))
+	log.Printf("Retrieved %d card question images", len(images))
 
-	body, err := json.Marshal(decks)
+	body, err := json.Marshal(images)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -40,20 +40,20 @@ func GetDecks(ctx context.Context, req events.APIGatewayProxyRequest, db dynamod
 	}, nil
 }
 
-func GetDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func GetCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	log.Printf("Received GET deck request with id = %s", id)
+	log.Printf("Received GET card question image request with id = %s", id)
 
-	deckDAO := persistence.NewDeckDataAccessObject(&db)
-	deck, err := deckDAO.GetDeck(ctx, id)
+	dao := persistence.NewCardQuestionImageDataAccessObject(&db)
+	image, err := dao.GetCardQuestionImage(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}
 
-	body, err := json.Marshal(deck)
+	body, err := json.Marshal(image)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -65,27 +65,27 @@ func GetDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb
 	}, nil
 }
 
-func CreateNewDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
-	var createDeckRequest models.CreateDeckRequest
-	err := json.Unmarshal([]byte(req.Body), &createDeckRequest)
+func CreateNewCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+	var createReq models.CreateCardQuestionImageRequest
+	err := json.Unmarshal([]byte(req.Body), &createReq)
 	if err != nil {
 		log.Printf("Can't unmarshal body: %v", err)
 		return utils.ClientError(http.StatusUnprocessableEntity)
 	}
 
-	err = validate.Struct(&createDeckRequest)
+	err = validate.Struct(&createReq)
 	if err != nil {
 		log.Printf("Invalid body: %v", err)
 		return utils.ClientError(http.StatusBadRequest)
 	}
-	log.Printf("Received POST request with new deck: %+v", createDeckRequest)
+	log.Printf("Received POST request with new card question image: %+v", createReq)
 
-	deckDAO := persistence.NewDeckDataAccessObject(&db)
-	res, err := deckDAO.InsertDeck(ctx, createDeckRequest)
+	dao := persistence.NewCardQuestionImageDataAccessObject(&db)
+	res, err := dao.InsertCardQuestionImage(ctx, createReq)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Inserted new deck: %+v", res)
+	log.Printf("Inserted new card question image: %+v", res)
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -99,22 +99,22 @@ func CreateNewDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dy
 	}, nil
 }
 
-func UpdateDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func UpdateCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
 
-	var updateDeckRequest models.UpdateDeckRequest
-	err := json.Unmarshal([]byte(req.Body), &updateDeckRequest)
+	var updateReq models.UpdateCardQuestionImageRequest
+	err := json.Unmarshal([]byte(req.Body), &updateReq)
 	if err != nil {
 		log.Printf("Can't unmarshal body: %v", err)
 		return utils.ClientError(http.StatusUnprocessableEntity)
 	}
-	log.Printf("Received PUT request with deck: %+v", updateDeckRequest)
+	log.Printf("Received PUT request with card question image: %+v", updateReq)
 
-	deckDAO := persistence.NewDeckDataAccessObject(&db)
-	res, err := deckDAO.UpdateDeck(ctx, id, updateDeckRequest)
+	dao := persistence.NewCardQuestionImageDataAccessObject(&db)
+	res, err := dao.UpdateCardQuestionImage(ctx, id, updateReq)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -123,7 +123,7 @@ func UpdateDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 		return utils.ClientError(http.StatusNotFound)
 	}
 
-	log.Printf("Updated deck: %+v", res)
+	log.Printf("Updated card question image: %+v", res)
 
 	body, err := json.Marshal(res)
 	if err != nil {
@@ -137,28 +137,28 @@ func UpdateDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 	}, nil
 }
 
-func DeleteDeck(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func DeleteCardQuestionImage(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	id, ok := req.QueryStringParameters["id"]
 	if !ok {
 		return utils.ClientError(http.StatusBadRequest)
 	}
 	log.Printf("Received DELETE request with id = %s", id)
 
-	deckDAO := persistence.NewDeckDataAccessObject(&db)
-	deck, err := deckDAO.DeleteDeck(ctx, id)
+	dao := persistence.NewCardQuestionImageDataAccessObject(&db)
+	image, err := dao.DeleteCardQuestionImage(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}
 
-	if deck == nil {
+	if image == nil {
 		return utils.ClientError(http.StatusNotFound)
 	}
 
-	body, err := json.Marshal(deck)
+	body, err := json.Marshal(image)
 	if err != nil {
 		return utils.ServerError(err)
 	}
-	log.Printf("Successfully deleted deck %+v", deck)
+	log.Printf("Successfully deleted card question image %+v", image)
 
 	return events.APIGatewayProxyResponse{
 		StatusCode: http.StatusOK,

@@ -22,7 +22,7 @@ func GetCardAnswerSections(ctx context.Context, req events.APIGatewayProxyReques
 	log.Printf("Received GET card answer sections request for cardId = %s", cardId)
 
 	dao := persistence.NewCardAnswerSectionDataAccessObject(&db)
-	sections, err := dao.GetCardAnswerSections(ctx, cardId, req.RequestContext.Stage)
+	sections, err := dao.GetCardAnswerSections(ctx, cardId)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -48,7 +48,7 @@ func GetCardAnswerSection(ctx context.Context, req events.APIGatewayProxyRequest
 	log.Printf("Received GET card answer section request with id = %s", id)
 
 	dao := persistence.NewCardAnswerSectionDataAccessObject(&db)
-	section, err := dao.GetCardAnswerSection(ctx, id, req.RequestContext.Stage)
+	section, err := dao.GetCardAnswerSection(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -81,7 +81,7 @@ func CreateNewCardAnswerSection(ctx context.Context, req events.APIGatewayProxyR
 	log.Printf("Received POST request with new card answer section: %+v", createReq)
 
 	dao := persistence.NewCardAnswerSectionDataAccessObject(&db)
-	res, err := dao.InsertCardAnswerSection(ctx, createReq, req.RequestContext.Stage)
+	res, err := dao.InsertCardAnswerSection(ctx, createReq)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -114,7 +114,7 @@ func UpdateCardAnswerSection(ctx context.Context, req events.APIGatewayProxyRequ
 	log.Printf("Received PUT request with card answer section: %+v", updateReq)
 
 	dao := persistence.NewCardAnswerSectionDataAccessObject(&db)
-	res, err := dao.UpdateCardAnswerSection(ctx, id, updateReq, req.RequestContext.Stage)
+	res, err := dao.UpdateCardAnswerSection(ctx, id, updateReq)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -145,7 +145,7 @@ func DeleteCardAnswerSection(ctx context.Context, req events.APIGatewayProxyRequ
 	log.Printf("Received DELETE request with id = %s", id)
 
 	dao := persistence.NewCardAnswerSectionDataAccessObject(&db)
-	section, err := dao.DeleteCardAnswerSection(ctx, id, req.RequestContext.Stage)
+	section, err := dao.DeleteCardAnswerSection(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}

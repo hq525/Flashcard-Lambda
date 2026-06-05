@@ -16,23 +16,23 @@ import (
 	"flashcard_lambda/internal/models"
 )
 
-type ICardAnswerSectionDataAccessObject interface {
-	GetCardAnswerSections(ctx context.Context, cardId string) ([]models.CardAnswerSection, error)
-	GetCardAnswerSection(ctx context.Context, id string) (*models.CardAnswerSection, error)
-	InsertCardAnswerSection(ctx context.Context, req models.CreateCardAnswerSectionRequest) (*models.CardAnswerSection, error)
-	UpdateCardAnswerSection(ctx context.Context, id string, req models.UpdateCardAnswerSectionRequest) (*models.CardAnswerSection, error)
-	DeleteCardAnswerSection(ctx context.Context, id string) (*models.CardAnswerSection, error)
+type ICardQuestionImageDataAccessObject interface {
+	GetCardQuestionImages(ctx context.Context, cardId string) ([]models.CardQuestionImage, error)
+	GetCardQuestionImage(ctx context.Context, id string) (*models.CardQuestionImage, error)
+	InsertCardQuestionImage(ctx context.Context, req models.CreateCardQuestionImageRequest) (*models.CardQuestionImage, error)
+	UpdateCardQuestionImage(ctx context.Context, id string, req models.UpdateCardQuestionImageRequest) (*models.CardQuestionImage, error)
+	DeleteCardQuestionImage(ctx context.Context, id string) (*models.CardQuestionImage, error)
 }
 
-type CardAnswerSectionDataAccessObject struct {
+type CardQuestionImageDataAccessObject struct {
 	db *dynamodb.Client
 }
 
-func NewCardAnswerSectionDataAccessObject(db *dynamodb.Client) ICardAnswerSectionDataAccessObject {
-	return &CardAnswerSectionDataAccessObject{db: db}
+func NewCardQuestionImageDataAccessObject(db *dynamodb.Client) ICardQuestionImageDataAccessObject {
+	return &CardQuestionImageDataAccessObject{db: db}
 }
 
-func (dao *CardAnswerSectionDataAccessObject) GetCardAnswerSections(ctx context.Context, cardId string) ([]models.CardAnswerSection, error) {
+func (dao *CardQuestionImageDataAccessObject) GetCardQuestionImages(ctx context.Context, cardId string) ([]models.CardQuestionImage, error) {
 	expr, err := expression.NewBuilder().WithFilter(
 		expression.Equal(
 			expression.Name("card_id"),
@@ -50,18 +50,18 @@ func (dao *CardAnswerSectionDataAccessObject) GetCardAnswerSections(ctx context.
 		ExpressionAttributeValues: expr.Values(),
 	}
 
-	var sections []models.CardAnswerSection
+	var images []models.CardQuestionImage
 	for {
 		res, err := dao.db.Scan(ctx, input)
 		if err != nil {
 			return nil, err
 		}
 
-		var page []models.CardAnswerSection
+		var page []models.CardQuestionImage
 		if err = attributevalue.UnmarshalListOfMaps(res.Items, &page); err != nil {
 			return nil, err
 		}
-		sections = append(sections, page...)
+		images = append(images, page...)
 
 		if res.LastEvaluatedKey == nil {
 			break
@@ -69,10 +69,10 @@ func (dao *CardAnswerSectionDataAccessObject) GetCardAnswerSections(ctx context.
 		input.ExclusiveStartKey = res.LastEvaluatedKey
 	}
 
-	return sections, nil
+	return images, nil
 }
 
-func (dao *CardAnswerSectionDataAccessObject) GetCardAnswerSection(ctx context.Context, id string) (*models.CardAnswerSection, error) {
+func (dao *CardQuestionImageDataAccessObject) GetCardQuestionImage(ctx context.Context, id string) (*models.CardQuestionImage, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -94,28 +94,25 @@ func (dao *CardAnswerSectionDataAccessObject) GetCardAnswerSection(ctx context.C
 		return nil, nil
 	}
 
-	section := new(models.CardAnswerSection)
-	err = attributevalue.UnmarshalMap(result.Item, section)
+	image := new(models.CardQuestionImage)
+	err = attributevalue.UnmarshalMap(result.Item, image)
 	if err != nil {
 		return nil, err
 	}
 
-	return section, nil
+	return image, nil
 }
 
-func (dao *CardAnswerSectionDataAccessObject) InsertCardAnswerSection(ctx context.Context, req models.CreateCardAnswerSectionRequest) (*models.CardAnswerSection, error) {
-	now := time.Now().UTC().Format(time.RFC3339)
-	section := models.CardAnswerSection{
+func (dao *CardQuestionImageDataAccessObject) InsertCardQuestionImage(ctx context.Context, req models.CreateCardQuestionImageRequest) (*models.CardQuestionImage, error) {
+	image := models.CardQuestionImage{
 		Id:              uuid.NewString(),
 		CardId:          req.CardId,
 		SequenceNumber:  req.SequenceNumber,
-		Title:           req.Title,
-		Answer:          req.Answer,
-		CreatedDateTime: now,
-		UpdatedDateTime: now,
+		ImageURL:        req.ImageURL,
+		CreatedDateTime: time.Now().UTC().Format(time.RFC3339),
 	}
 
-	item, err := attributevalue.MarshalMap(section)
+	item, err := attributevalue.MarshalMap(image)
 	if err != nil {
 		return nil, err
 	}
@@ -129,10 +126,10 @@ func (dao *CardAnswerSectionDataAccessObject) InsertCardAnswerSection(ctx contex
 		return nil, err
 	}
 
-	return &section, nil
+	return &image, nil
 }
 
-func (dao *CardAnswerSectionDataAccessObject) UpdateCardAnswerSection(ctx context.Context, id string, req models.UpdateCardAnswerSectionRequest) (*models.CardAnswerSection, error) {
+func (dao *CardQuestionImageDataAccessObject) UpdateCardQuestionImage(ctx context.Context, id string, req models.UpdateCardQuestionImageRequest) (*models.CardQuestionImage, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -143,14 +140,8 @@ func (dao *CardAnswerSectionDataAccessObject) UpdateCardAnswerSection(ctx contex
 			expression.Name("sequence_number"),
 			expression.Value(req.SequenceNumber),
 		).Set(
-			expression.Name("title"),
-			expression.Value(req.Title),
-		).Set(
-			expression.Name("answer"),
-			expression.Value(req.Answer),
-		).Set(
-			expression.Name("updated_date_time"),
-			expression.Value(time.Now().UTC().Format(time.RFC3339)),
+			expression.Name("image_url"),
+			expression.Value(req.ImageURL),
 		),
 	).WithCondition(
 		expression.Equal(
@@ -187,16 +178,16 @@ func (dao *CardAnswerSectionDataAccessObject) UpdateCardAnswerSection(ctx contex
 		return nil, nil
 	}
 
-	section := new(models.CardAnswerSection)
-	err = attributevalue.UnmarshalMap(res.Attributes, section)
+	image := new(models.CardQuestionImage)
+	err = attributevalue.UnmarshalMap(res.Attributes, image)
 	if err != nil {
 		return nil, err
 	}
 
-	return section, nil
+	return image, nil
 }
 
-func (dao *CardAnswerSectionDataAccessObject) DeleteCardAnswerSection(ctx context.Context, id string) (*models.CardAnswerSection, error) {
+func (dao *CardQuestionImageDataAccessObject) DeleteCardQuestionImage(ctx context.Context, id string) (*models.CardQuestionImage, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -219,11 +210,11 @@ func (dao *CardAnswerSectionDataAccessObject) DeleteCardAnswerSection(ctx contex
 		return nil, nil
 	}
 
-	section := new(models.CardAnswerSection)
-	err = attributevalue.UnmarshalMap(res.Attributes, section)
+	image := new(models.CardQuestionImage)
+	err = attributevalue.UnmarshalMap(res.Attributes, image)
 	if err != nil {
 		return nil, err
 	}
 
-	return section, nil
+	return image, nil
 }

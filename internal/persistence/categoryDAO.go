@@ -17,11 +17,11 @@ import (
 )
 
 type ICategoryDataAccessObject interface {
-	GetCategories(ctx context.Context, stage string) ([]models.Category, error)
-	GetCategory(ctx context.Context, id string, stage string) (*models.Category, error)
-	InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, stage string) (*models.Category, error)
-	UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest, stage string) (*models.Category, error)
-	DeleteCategory(ctx context.Context, id string, stage string) (*models.Category, error)
+	GetCategories(ctx context.Context) ([]models.Category, error)
+	GetCategory(ctx context.Context, id string) (*models.Category, error)
+	InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest) (*models.Category, error)
+	UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest) (*models.Category, error)
+	DeleteCategory(ctx context.Context, id string) (*models.Category, error)
 }
 
 type CategoryDataAccessObject struct {
@@ -34,7 +34,7 @@ func NewCategoryDataAccessObject(db *dynamodb.Client) ICategoryDataAccessObject 
 	}
 }
 
-func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, stage string) ([]models.Category, error) {
+func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context) ([]models.Category, error) {
 	expr, err := expression.NewBuilder().WithFilter(
 		expression.Equal(
 			expression.Name("entity_type"),
@@ -46,7 +46,7 @@ func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, 
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -74,14 +74,14 @@ func (categoryDAO *CategoryDataAccessObject) GetCategories(ctx context.Context, 
 	return categories, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id string, stage string) (*models.Category, error) {
+func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id string) (*models.Category, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
@@ -107,7 +107,7 @@ func (categoryDAO *CategoryDataAccessObject) GetCategory(ctx context.Context, id
 	return category, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest, stage string) (*models.Category, error) {
+func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context, createCategory models.CreateCategoryRequest) (*models.Category, error) {
 	category := models.Category{
 		Id:          uuid.NewString(),
 		EntityType:  "category",
@@ -120,7 +120,7 @@ func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context,
 		return nil, err
 	}
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Item:      item,
 	}
 	_, err = categoryDAO.db.PutItem(ctx, input)
@@ -131,7 +131,7 @@ func (categoryDAO *CategoryDataAccessObject) InsertCategory(ctx context.Context,
 	return &category, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest, stage string) (*models.Category, error) {
+func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context, id string, updateCategory models.UpdateCategoryRequest) (*models.Category, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -158,7 +158,7 @@ func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context,
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -187,14 +187,14 @@ func (categoryDAO *CategoryDataAccessObject) UpdateCategory(ctx context.Context,
 	return category, nil
 }
 
-func (categoryDAO *CategoryDataAccessObject) DeleteCategory(ctx context.Context, id string, stage string) (*models.Category, error) {
+func (categoryDAO *CategoryDataAccessObject) DeleteCategory(ctx context.Context, id string) (*models.Category, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.DeleteItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},

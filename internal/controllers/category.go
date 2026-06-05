@@ -20,7 +20,7 @@ var validate = validator.New()
 func GetCategories(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	log.Printf("Received GET categories request")
 	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	categories, err := categoryDAO.GetCategories(ctx, req.RequestContext.Stage)
+	categories, err := categoryDAO.GetCategories(ctx)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -46,7 +46,7 @@ func GetCategory(ctx context.Context, req events.APIGatewayProxyRequest, db dyna
 	log.Printf("Received GET category request with id = %s", id)
 
 	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	category, err := categoryDAO.GetCategory(ctx, id, req.RequestContext.Stage)
+	category, err := categoryDAO.GetCategory(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -78,7 +78,7 @@ func CreateNewCategory(ctx context.Context, req events.APIGatewayProxyRequest, d
 	log.Printf("Received POST request with new category: %+v", createCategoryRequest)
 
 	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	res, err := categoryDAO.InsertCategory(ctx, createCategoryRequest, req.RequestContext.Stage)
+	res, err := categoryDAO.InsertCategory(ctx, createCategoryRequest)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -111,7 +111,7 @@ func UpdateCategory(ctx context.Context, req events.APIGatewayProxyRequest, db d
 	log.Printf("Received PUT request with category: %+v", updateCategoryRequest)
 
 	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	res, err := categoryDAO.UpdateCategory(ctx, id, updateCategoryRequest, req.RequestContext.Stage)
+	res, err := categoryDAO.UpdateCategory(ctx, id, updateCategoryRequest)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -142,7 +142,7 @@ func DeleteCategory(ctx context.Context, req events.APIGatewayProxyRequest, db d
 	log.Printf("Received DELETE request with id = %s", id)
 
 	categoryDAO := persistence.NewCategoryDataAccessObject(&db)
-	category, err := categoryDAO.DeleteCategory(ctx, id, req.RequestContext.Stage)
+	category, err := categoryDAO.DeleteCategory(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}

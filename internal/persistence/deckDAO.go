@@ -16,11 +16,11 @@ import (
 )
 
 type IDeckDataAccessObject interface {
-	GetDecks(ctx context.Context, categoryId string, stage string) ([]models.Deck, error)
-	GetDeck(ctx context.Context, id string, stage string) (*models.Deck, error)
-	InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest, stage string) (*models.Deck, error)
-	UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest, stage string) (*models.Deck, error)
-	DeleteDeck(ctx context.Context, id string, stage string) (*models.Deck, error)
+	GetDecks(ctx context.Context, categoryId string) ([]models.Deck, error)
+	GetDeck(ctx context.Context, id string) (*models.Deck, error)
+	InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest) (*models.Deck, error)
+	UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest) (*models.Deck, error)
+	DeleteDeck(ctx context.Context, id string) (*models.Deck, error)
 }
 
 type DeckDataAccessObject struct {
@@ -33,7 +33,7 @@ func NewDeckDataAccessObject(db *dynamodb.Client) IDeckDataAccessObject {
 	}
 }
 
-func (deckDAO *DeckDataAccessObject) GetDecks(ctx context.Context, categoryId string, stage string) ([]models.Deck, error) {
+func (deckDAO *DeckDataAccessObject) GetDecks(ctx context.Context, categoryId string) ([]models.Deck, error) {
 	expr, err := expression.NewBuilder().WithFilter(
 		expression.Equal(
 			expression.Name("category_id"),
@@ -45,7 +45,7 @@ func (deckDAO *DeckDataAccessObject) GetDecks(ctx context.Context, categoryId st
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -73,14 +73,14 @@ func (deckDAO *DeckDataAccessObject) GetDecks(ctx context.Context, categoryId st
 	return decks, nil
 }
 
-func (deckDAO *DeckDataAccessObject) GetDeck(ctx context.Context, id string, stage string) (*models.Deck, error) {
+func (deckDAO *DeckDataAccessObject) GetDeck(ctx context.Context, id string) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
@@ -104,7 +104,7 @@ func (deckDAO *DeckDataAccessObject) GetDeck(ctx context.Context, id string, sta
 	return deck, nil
 }
 
-func (deckDAO *DeckDataAccessObject) InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest, stage string) (*models.Deck, error) {
+func (deckDAO *DeckDataAccessObject) InsertDeck(ctx context.Context, createDeck models.CreateDeckRequest) (*models.Deck, error) {
 	deck := models.Deck{
 		Id:          uuid.NewString(),
 		CategoryId:  createDeck.CategoryId,
@@ -118,7 +118,7 @@ func (deckDAO *DeckDataAccessObject) InsertDeck(ctx context.Context, createDeck 
 	}
 
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Item:      item,
 	}
 	_, err = deckDAO.db.PutItem(ctx, input)
@@ -129,7 +129,7 @@ func (deckDAO *DeckDataAccessObject) InsertDeck(ctx context.Context, createDeck 
 	return &deck, nil
 }
 
-func (deckDAO *DeckDataAccessObject) UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest, stage string) (*models.Deck, error) {
+func (deckDAO *DeckDataAccessObject) UpdateDeck(ctx context.Context, id string, updateDeck models.UpdateDeckRequest) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (deckDAO *DeckDataAccessObject) UpdateDeck(ctx context.Context, id string, 
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -187,14 +187,14 @@ func (deckDAO *DeckDataAccessObject) UpdateDeck(ctx context.Context, id string, 
 	return deck, nil
 }
 
-func (deckDAO *DeckDataAccessObject) DeleteDeck(ctx context.Context, id string, stage string) (*models.Deck, error) {
+func (deckDAO *DeckDataAccessObject) DeleteDeck(ctx context.Context, id string) (*models.Deck, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.DeleteItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},

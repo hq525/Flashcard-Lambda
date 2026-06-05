@@ -9,6 +9,7 @@ import (
 
 	"github.com/aws/aws-lambda-go/events"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 const (
@@ -16,6 +17,8 @@ const (
 	routeDeck              = "/deck"
 	routeTag               = "/tag"
 	routeCardAnswerSection = "/card-answer-section"
+	routeCardQuestionImage = "/card-question-image"
+	routePresignedURL      = "/presigned-url"
 )
 
 func invalidRoute() events.APIGatewayProxyResponse {
@@ -30,7 +33,7 @@ func invalidRoute() events.APIGatewayProxyResponse {
 	}
 }
 
-func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
+func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client, s3Client s3.Client) (events.APIGatewayProxyResponse, error) {
 	switch req.Path {
 	case "/categories":
 		return controllers.GetCategories(ctx, req, db)
@@ -48,6 +51,12 @@ func ProcessGet(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 		return controllers.GetCardAnswerSections(ctx, req, db)
 	case routeCardAnswerSection:
 		return controllers.GetCardAnswerSection(ctx, req, db)
+	case "/card-question-images":
+		return controllers.GetCardQuestionImages(ctx, req, db)
+	case routeCardQuestionImage:
+		return controllers.GetCardQuestionImage(ctx, req, db)
+	case routePresignedURL:
+		return controllers.GetPresignedURL(ctx, req, s3Client)
 	default:
 		return invalidRoute(), nil
 	}
@@ -63,6 +72,8 @@ func ProcessPost(ctx context.Context, req events.APIGatewayProxyRequest, db dyna
 		return controllers.CreateNewTag(ctx, req, db)
 	case routeCardAnswerSection:
 		return controllers.CreateNewCardAnswerSection(ctx, req, db)
+	case routeCardQuestionImage:
+		return controllers.CreateNewCardQuestionImage(ctx, req, db)
 	default:
 		return invalidRoute(), nil
 	}
@@ -78,6 +89,8 @@ func ProcessPut(ctx context.Context, req events.APIGatewayProxyRequest, db dynam
 		return controllers.UpdateTag(ctx, req, db)
 	case routeCardAnswerSection:
 		return controllers.UpdateCardAnswerSection(ctx, req, db)
+	case routeCardQuestionImage:
+		return controllers.UpdateCardQuestionImage(ctx, req, db)
 	default:
 		return invalidRoute(), nil
 	}
@@ -93,6 +106,8 @@ func ProcessDelete(ctx context.Context, req events.APIGatewayProxyRequest, db dy
 		return controllers.DeleteTag(ctx, req, db)
 	case routeCardAnswerSection:
 		return controllers.DeleteCardAnswerSection(ctx, req, db)
+	case routeCardQuestionImage:
+		return controllers.DeleteCardQuestionImage(ctx, req, db)
 	default:
 		return invalidRoute(), nil
 	}

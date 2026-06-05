@@ -16,11 +16,11 @@ import (
 )
 
 type ITagDataAccessObject interface {
-	GetTags(ctx context.Context, stage string) ([]models.Tag, error)
-	GetTag(ctx context.Context, id string, stage string) (*models.Tag, error)
-	InsertTag(ctx context.Context, createTag models.CreateTagRequest, stage string) (*models.Tag, error)
-	UpdateTag(ctx context.Context, id string, updateTag models.UpdateTagRequest, stage string) (*models.Tag, error)
-	DeleteTag(ctx context.Context, id string, stage string) (*models.Tag, error)
+	GetTags(ctx context.Context) ([]models.Tag, error)
+	GetTag(ctx context.Context, id string) (*models.Tag, error)
+	InsertTag(ctx context.Context, createTag models.CreateTagRequest) (*models.Tag, error)
+	UpdateTag(ctx context.Context, id string, updateTag models.UpdateTagRequest) (*models.Tag, error)
+	DeleteTag(ctx context.Context, id string) (*models.Tag, error)
 }
 
 type TagDataAccessObject struct {
@@ -33,7 +33,7 @@ func NewTagDataAccessObject(db *dynamodb.Client) ITagDataAccessObject {
 	}
 }
 
-func (tagDAO *TagDataAccessObject) GetTags(ctx context.Context, stage string) ([]models.Tag, error) {
+func (tagDAO *TagDataAccessObject) GetTags(ctx context.Context) ([]models.Tag, error) {
 	expr, err := expression.NewBuilder().WithFilter(
 		expression.Equal(
 			expression.Name("entity_type"),
@@ -45,7 +45,7 @@ func (tagDAO *TagDataAccessObject) GetTags(ctx context.Context, stage string) ([
 	}
 
 	input := &dynamodb.ScanInput{
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		FilterExpression:          expr.Filter(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -73,14 +73,14 @@ func (tagDAO *TagDataAccessObject) GetTags(ctx context.Context, stage string) ([
 	return tags, nil
 }
 
-func (tagDAO *TagDataAccessObject) GetTag(ctx context.Context, id string, stage string) (*models.Tag, error) {
+func (tagDAO *TagDataAccessObject) GetTag(ctx context.Context, id string) (*models.Tag, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.GetItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
@@ -104,7 +104,7 @@ func (tagDAO *TagDataAccessObject) GetTag(ctx context.Context, id string, stage 
 	return tag, nil
 }
 
-func (tagDAO *TagDataAccessObject) InsertTag(ctx context.Context, createTag models.CreateTagRequest, stage string) (*models.Tag, error) {
+func (tagDAO *TagDataAccessObject) InsertTag(ctx context.Context, createTag models.CreateTagRequest) (*models.Tag, error) {
 	tag := models.Tag{
 		Id:          uuid.NewString(),
 		EntityType:  "tag",
@@ -118,7 +118,7 @@ func (tagDAO *TagDataAccessObject) InsertTag(ctx context.Context, createTag mode
 	}
 
 	input := &dynamodb.PutItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Item:      item,
 	}
 	_, err = tagDAO.db.PutItem(ctx, input)
@@ -129,7 +129,7 @@ func (tagDAO *TagDataAccessObject) InsertTag(ctx context.Context, createTag mode
 	return &tag, nil
 }
 
-func (tagDAO *TagDataAccessObject) UpdateTag(ctx context.Context, id string, updateTag models.UpdateTagRequest, stage string) (*models.Tag, error) {
+func (tagDAO *TagDataAccessObject) UpdateTag(ctx context.Context, id string, updateTag models.UpdateTagRequest) (*models.Tag, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
@@ -157,7 +157,7 @@ func (tagDAO *TagDataAccessObject) UpdateTag(ctx context.Context, id string, upd
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},
-		TableName:                 aws.String(constants.GetDBName(stage)),
+		TableName:                 aws.String(constants.GetDBName()),
 		UpdateExpression:          expr.Update(),
 		ExpressionAttributeNames:  expr.Names(),
 		ExpressionAttributeValues: expr.Values(),
@@ -187,14 +187,14 @@ func (tagDAO *TagDataAccessObject) UpdateTag(ctx context.Context, id string, upd
 	return tag, nil
 }
 
-func (tagDAO *TagDataAccessObject) DeleteTag(ctx context.Context, id string, stage string) (*models.Tag, error) {
+func (tagDAO *TagDataAccessObject) DeleteTag(ctx context.Context, id string) (*models.Tag, error) {
 	key, err := attributevalue.Marshal(id)
 	if err != nil {
 		return nil, err
 	}
 
 	input := &dynamodb.DeleteItemInput{
-		TableName: aws.String(constants.GetDBName(stage)),
+		TableName: aws.String(constants.GetDBName()),
 		Key: map[string]dynamodbTypes.AttributeValue{
 			"id": key,
 		},

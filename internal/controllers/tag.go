@@ -17,7 +17,7 @@ import (
 func GetTags(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.Client) (events.APIGatewayProxyResponse, error) {
 	log.Printf("Received GET tags request")
 	tagDAO := persistence.NewTagDataAccessObject(&db)
-	tags, err := tagDAO.GetTags(ctx, req.RequestContext.Stage)
+	tags, err := tagDAO.GetTags(ctx)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -43,7 +43,7 @@ func GetTag(ctx context.Context, req events.APIGatewayProxyRequest, db dynamodb.
 	log.Printf("Received GET tag request with id = %s", id)
 
 	tagDAO := persistence.NewTagDataAccessObject(&db)
-	tag, err := tagDAO.GetTag(ctx, id, req.RequestContext.Stage)
+	tag, err := tagDAO.GetTag(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -76,7 +76,7 @@ func CreateNewTag(ctx context.Context, req events.APIGatewayProxyRequest, db dyn
 	log.Printf("Received POST request with new tag: %+v", createTagRequest)
 
 	tagDAO := persistence.NewTagDataAccessObject(&db)
-	res, err := tagDAO.InsertTag(ctx, createTagRequest, req.RequestContext.Stage)
+	res, err := tagDAO.InsertTag(ctx, createTagRequest)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -109,7 +109,7 @@ func UpdateTag(ctx context.Context, req events.APIGatewayProxyRequest, db dynamo
 	log.Printf("Received PUT request with tag: %+v", updateTagRequest)
 
 	tagDAO := persistence.NewTagDataAccessObject(&db)
-	res, err := tagDAO.UpdateTag(ctx, id, updateTagRequest, req.RequestContext.Stage)
+	res, err := tagDAO.UpdateTag(ctx, id, updateTagRequest)
 	if err != nil {
 		return utils.ServerError(err)
 	}
@@ -140,7 +140,7 @@ func DeleteTag(ctx context.Context, req events.APIGatewayProxyRequest, db dynamo
 	log.Printf("Received DELETE request with id = %s", id)
 
 	tagDAO := persistence.NewTagDataAccessObject(&db)
-	tag, err := tagDAO.DeleteTag(ctx, id, req.RequestContext.Stage)
+	tag, err := tagDAO.DeleteTag(ctx, id)
 	if err != nil {
 		return utils.ServerError(err)
 	}

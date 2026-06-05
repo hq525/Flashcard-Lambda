@@ -11,9 +11,11 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 	"github.com/aws/aws-sdk-go-v2/config"
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
+	"github.com/aws/aws-sdk-go-v2/service/s3"
 )
 
 var db dynamodb.Client
+var s3Client s3.Client
 
 func init() {
 	sdkConfig, err := config.LoadDefaultConfig(context.TODO())
@@ -22,6 +24,7 @@ func init() {
 	}
 
 	db = *dynamodb.NewFromConfig(sdkConfig)
+	s3Client = *s3.NewFromConfig(sdkConfig)
 }
 
 func main() {
@@ -33,7 +36,7 @@ func HandleRequest(ctx context.Context, req events.APIGatewayProxyRequest) (even
 	log.Printf("Stage: %#v", req.RequestContext.Stage)
 	switch req.HTTPMethod {
 	case "GET":
-		return api.ProcessGet(ctx, req, db)
+		return api.ProcessGet(ctx, req, db, s3Client)
 	case "POST":
 		return api.ProcessPost(ctx, req, db)
 	case "PUT":
