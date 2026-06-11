@@ -52,7 +52,8 @@ type CardAnswerSection struct {
 
 type CardAnswerSectionImage struct {
 	Id                  string `json:"id" dynamodbav:"id"`
-	CardAnswerSectionId string `json:"cardID" dynamodbav:"card_answer_section_id"`
+	CardAnswerSectionId string `json:"cardAnswerSectionID" dynamodbav:"card_answer_section_id"`
 	SequenceNumber      uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
+	CreatedDateTime     string `json:"createdDateTime" dynamodbav:"created_date_time"`
 	ImageURL            string `json:"imageURL" dynamodbav:"image_url"`
 }

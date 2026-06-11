@@ -29,7 +29,13 @@ func GetPresignedURL(ctx context.Context, req events.APIGatewayProxyRequest, s3C
 
 	ext := filepath.Ext(fileName)
 	key := "images/" + uuid.NewString() + ext
-	bucket := constants.GetBucketName()
+
+	var bucket string
+	if req.QueryStringParameters["imageType"] == "answer" {
+		bucket = constants.GetAnswerImageBucketName()
+	} else {
+		bucket = constants.GetBucketName()
+	}
 
 	presignClient := s3.NewPresignClient(&s3Client)
 	presignedReq, err := presignClient.PresignPutObject(ctx, &s3.PutObjectInput{

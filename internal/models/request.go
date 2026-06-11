@@ -54,3 +54,14 @@ type UpdateCardQuestionImageRequest struct {
 	SequenceNumber uint16 `json:"sequenceNumber"`
 	ImageURL       string `json:"imageURL"`
 }
+
+type CreateCardAnswerSectionImageRequest struct {
+	CardAnswerSectionId string `json:"cardAnswerSectionID" validate:"required"`
+	SequenceNumber      uint16 `json:"sequenceNumber" validate:"required"`
+	ImageURL            string `json:"imageURL" validate:"required"`
+}
+
+type UpdateCardAnswerSectionImageRequest struct {
+	SequenceNumber uint16 `json:"sequenceNumber"`
+	ImageURL       string `json:"imageURL"`
+}

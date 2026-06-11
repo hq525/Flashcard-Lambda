@@ -20,7 +20,8 @@ API Gateway → Lambda Handler → Router (methods.go) → Controllers → Dynam
 | Variable | Description |
 |---|---|
 | `DYNAMODB_TABLE` | DynamoDB table name (e.g. `flash-card-app` for prod, `flash-card-app-dev` for dev) |
-| `S3_BUCKET` | S3 bucket for images (e.g. `flash-card-app-images` for prod, `flash-card-app-images-dev` for dev) |
+| `S3_BUCKET` | S3 bucket for card question images (e.g. `flash-card-app-images` for prod, `flash-card-app-images-dev` for dev) |
+| `S3_ANSWER_IMAGE_BUCKET` | S3 bucket for card answer section images (e.g. `flash-card-app-answer-images` for prod, `flash-card-app-answer-images-dev` for dev) |
 
 Set these in the Lambda function configuration. AWS Lambda makes them available to the process at runtime via `os.Getenv`.
 
@@ -31,6 +32,7 @@ Category
 └── Deck
     └── Card
         ├── CardAnswerSection (ordered by sequence_number)
+        │   └── CardAnswerSectionImage (ordered by sequence_number)
         └── CardQuestionImage (ordered by sequence_number)
 
 Tag  (associated with Cards via tag_ids)
@@ -64,8 +66,13 @@ Tag  (associated with Cards via tag_ids)
 | GET | `/card-question-image` | Get a question image by ID |
 | POST | `/card-question-image` | Create a question image record |
 | PUT | `/card-question-image` | Update a question image record |
-| DELETE | `/card-question-image` | Delete a question image record |
-| GET | `/presigned-url` | Get a pre-signed S3 URL for image upload |
+| DELETE | `/card-question-image` | Delete a question image record and the corresponding S3 object |
+| GET | `/card-answer-section-images` | List images for a card answer section |
+| GET | `/card-answer-section-image` | Get an answer section image by ID |
+| POST | `/card-answer-section-image` | Create an answer section image record |
+| PUT | `/card-answer-section-image` | Update an answer section image record |
+| DELETE | `/card-answer-section-image` | Delete an answer section image record and the corresponding S3 object |
+| GET | `/presigned-url` | Get a pre-signed S3 URL for image upload (`imageType=answer` for answer section images, omit for question images) |
 
 All responses include CORS headers (`Access-Control-Allow-Origin: *`).
 
@@ -82,19 +89,20 @@ The function requires two environment variables. Set them in the Lambda function
 |---|---|
 | `DYNAMODB_TABLE` | `flash-card-app` |
 | `S3_BUCKET` | `flash-card-app-images` |
+| `S3_ANSWER_IMAGE_BUCKET` | `flash-card-app-answer-images` |
 
 **AWS CLI:**
 ```bash
 aws lambda update-function-configuration \
   --function-name <your-function-name> \
-  --environment "Variables={DYNAMODB_TABLE=flash-card-app,S3_BUCKET=flash-card-app-images}"
+  --environment "Variables={DYNAMODB_TABLE=flash-card-app,S3_BUCKET=flash-card-app-images,S3_ANSWER_IMAGE_BUCKET=flash-card-app-answer-images}"
 ```
 
 For the dev function, use the dev resource names:
 ```bash
 aws lambda update-function-configuration \
   --function-name <your-dev-function-name> \
-  --environment "Variables={DYNAMODB_TABLE=flash-card-app-dev,S3_BUCKET=flash-card-app-images-dev}"
+  --environment "Variables={DYNAMODB_TABLE=flash-card-app-dev,S3_BUCKET=flash-card-app-images-dev,S3_ANSWER_IMAGE_BUCKET=flash-card-app-answer-images-dev}"
 ```
 
 **Local testing:**
@@ -103,6 +111,7 @@ Set the variables in your shell before running:
 ```bash
 export DYNAMODB_TABLE=flash-card-app-dev
 export S3_BUCKET=flash-card-app-images-dev
+export S3_ANSWER_IMAGE_BUCKET=flash-card-app-answer-images-dev
 ```
 
 ## Development
