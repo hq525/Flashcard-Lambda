@@ -1,0 +1,170 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Flashcard app backend - API Gateway + Lambda + DynamoDB + S3
+
+Parameters:
+  StageName:
+    Type: String
+    Default: dev
+    AllowedValues: [dev, prod]
+    Description: Deployment stage; also suffixes the table and bucket names.
+
+Conditions:
+  IsProd: !Equals [!Ref StageName, prod]
+
+Resources:
+  Api:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: !Sub flashcard-api-${StageName}
+      StageName: !Ref StageName
+      # Every method requires an x-api-key header. Retrieve the key value
+      # with: aws apigateway get-api-keys --include-values
+      Auth:
+        ApiKeyRequired: true
+        AddApiKeyRequiredToCorsPreflight: false
+        UsagePlan:
+          CreateUsagePlan: PER_API
+      # Preflight OPTIONS is answered by API Gateway (no API key needed);
+      # all other responses get CORS headers from the Lambda itself.
+      Cors:
+        AllowOrigin: "'*'"
+        AllowHeaders: "'Content-Type,X-Api-Key'"
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+
+  FlashcardFunction:
+    Type: AWS::Serverless::Function
+    Metadata:
+      BuildMethod: makefile
+    Properties:
+      FunctionName: !Sub flashcard-backend-${StageName}
+      Runtime: provided.al2023
+      Handler: bootstrap
+      Architectures: [arm64]
+      CodeUri: .
+      Timeout: 30
+      MemorySize: 128
+      Environment:
+        Variables:
+          DYNAMODB_TABLE: !Ref Table
+          S3_BUCKET: !Ref ImageBucket
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref Table
+        - S3CrudPolicy:
+            BucketName: !Ref ImageBucket
+        # Legacy buckets from the pre-consolidation layout: deletes parse
+        # the bucket from the stored image URL, so the function needs
+        # delete rights there until old images are gone. Remove once all
+        # legacy images are deleted or migrated.
+        - Statement:
+            - Effect: Allow
+              Action: s3:DeleteObject
+              Resource:
+                - !If [IsProd, 'arn:aws:s3:::flash-card-app-images/*', 'arn:aws:s3:::flash-card-app-images-dev/*']
+                - !If [IsProd, 'arn:aws:s3:::flash-card-app-answer-images/*', 'arn:aws:s3:::flash-card-app-answer-images-dev/*']
+      Events:
+        Root:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /
+            Method: ANY
+        Proxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref Api
+            Path: /{proxy+}
+            Method: ANY
+
+  Table:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: !Sub flash-card-app-${StageName}
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: id
+          AttributeType: S
+        - AttributeName: entity_type
+          AttributeType: S
+        - AttributeName: category_id
+          AttributeType: S
+        - AttributeName: deck_id
+          AttributeType: S
+        - AttributeName: card_id
+          AttributeType: S
+        - AttributeName: card_answer_section_id
+          AttributeType: S
+      KeySchema:
+        - AttributeName: id
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: entity_type-index
+          KeySchema:
+            - AttributeName: entity_type
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: category_id-index
+          KeySchema:
+            - AttributeName: category_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: deck_id-index
+          KeySchema:
+            - AttributeName: deck_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: card_id-index
+          KeySchema:
+            - AttributeName: card_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+        - IndexName: card_answer_section_id-index
+          KeySchema:
+            - AttributeName: card_answer_section_id
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  ImageBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName: !Sub flash-card-app-media-${StageName}
+      CorsConfiguration:
+        CorsRules:
+          - AllowedOrigins: ['*']
+            AllowedMethods: [GET, PUT]
+            AllowedHeaders: ['*']
+            MaxAge: 3600
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        IgnorePublicAcls: true
+        BlockPublicPolicy: false
+        RestrictPublicBuckets: false
+
+  # Images are served directly from S3 by their stored URL. For a
+  # locked-down setup, front the bucket with CloudFront and drop this.
+  ImageBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket: !Ref ImageBucket
+      PolicyDocument:
+        Version: '2012-10-17'
+        Statement:
+          - Effect: Allow
+            Principal: '*'
+            Action: s3:GetObject
+            Resource: !Sub ${ImageBucket.Arn}/*
+
+Outputs:
+  ApiUrl:
+    Description: Base URL of the API
+    Value: !Sub https://${Api}.execute-api.${AWS::Region}.amazonaws.com/${StageName}
+  TableName:
+    Value: !Ref Table
+  BucketName:
+    Value: !Ref ImageBucket

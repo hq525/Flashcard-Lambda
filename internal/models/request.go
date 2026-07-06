@@ -6,7 +6,7 @@ type CreateCategoryRequest struct {
 }
 
 type UpdateCategoryRequest struct {
-	Name        string `json:"name"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 }
 
@@ -17,7 +17,7 @@ type CreateDeckRequest struct {
 }
 
 type UpdateDeckRequest struct {
-	Name        string `json:"name"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
 }
 
@@ -27,8 +27,21 @@ type CreateTagRequest struct {
 }
 
 type UpdateTagRequest struct {
-	Name        string `json:"name"`
+	Name        string `json:"name" validate:"required"`
 	Description string `json:"description"`
+}
+
+type CreateCardRequest struct {
+	DeckId   string   `json:"deckID" validate:"required"`
+	Question string   `json:"question" validate:"required"`
+	TagIds   []string `json:"tags"`
+}
+
+type UpdateCardRequest struct {
+	Question             string   `json:"question" validate:"required"`
+	TagIds               []string `json:"tags"`
+	PreviouslyCorrect    bool     `json:"memorized"`
+	LastAccessedDateTime string   `json:"lastAccessedDateTime"`
 }
 
 type CreateCardAnswerSectionRequest struct {
@@ -39,7 +52,7 @@ type CreateCardAnswerSectionRequest struct {
 }
 
 type UpdateCardAnswerSectionRequest struct {
-	SequenceNumber uint16 `json:"sequenceNumber"`
+	SequenceNumber uint16 `json:"sequenceNumber" validate:"required"`
 	Title          string `json:"title"`
 	Answer         string `json:"answer"`
 }
@@ -51,8 +64,8 @@ type CreateCardQuestionImageRequest struct {
 }
 
 type UpdateCardQuestionImageRequest struct {
-	SequenceNumber uint16 `json:"sequenceNumber"`
-	ImageURL       string `json:"imageURL"`
+	SequenceNumber uint16 `json:"sequenceNumber" validate:"required"`
+	ImageURL       string `json:"imageURL" validate:"required"`
 }
 
 type CreateCardAnswerSectionImageRequest struct {
@@ -62,6 +75,6 @@ type CreateCardAnswerSectionImageRequest struct {
 }
 
 type UpdateCardAnswerSectionImageRequest struct {
-	SequenceNumber uint16 `json:"sequenceNumber"`
-	ImageURL       string `json:"imageURL"`
+	SequenceNumber uint16 `json:"sequenceNumber" validate:"required"`
+	ImageURL       string `json:"imageURL" validate:"required"`
 }
