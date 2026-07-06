@@ -1,5 +1,15 @@
 package models
 
+const (
+	EntityTypeCategory               = "category"
+	EntityTypeDeck                   = "deck"
+	EntityTypeTag                    = "tag"
+	EntityTypeCard                   = "card"
+	EntityTypeCardAnswerSection      = "card_answer_section"
+	EntityTypeCardQuestionImage      = "card_question_image"
+	EntityTypeCardAnswerSectionImage = "card_answer_section_image"
+)
+
 type Category struct {
 	Id          string `json:"id" dynamodbav:"id"`
 	EntityType  string `json:"entityType" dynamodbav:"entity_type"`
@@ -9,6 +19,7 @@ type Category struct {
 
 type Deck struct {
 	Id          string `json:"id" dynamodbav:"id"`
+	EntityType  string `json:"entityType" dynamodbav:"entity_type"`
 	CategoryId  string `json:"categoryID" dynamodbav:"category_id"`
 	Name        string `json:"name" dynamodbav:"name"`
 	Description string `json:"description" dynamodbav:"description"`
@@ -16,6 +27,7 @@ type Deck struct {
 
 type Card struct {
 	Id                   string   `json:"id" dynamodbav:"id"` // Must Correspond with DynamoDB Table Partition Key
+	EntityType           string   `json:"entityType" dynamodbav:"entity_type"`
 	DeckId               string   `json:"deckID" dynamodbav:"deck_id"`
 	TagIds               []string `json:"tags" dynamodbav:"tag_ids"`
 	Question             string   `json:"question" dynamodbav:"question"`
@@ -34,6 +46,7 @@ type Tag struct {
 
 type CardQuestionImage struct {
 	Id              string `json:"id" dynamodbav:"id"`
+	EntityType      string `json:"entityType" dynamodbav:"entity_type"`
 	CardId          string `json:"cardID" dynamodbav:"card_id"`
 	SequenceNumber  uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
 	CreatedDateTime string `json:"createdDateTime" dynamodbav:"created_date_time"`
@@ -42,6 +55,7 @@ type CardQuestionImage struct {
 
 type CardAnswerSection struct {
 	Id              string `json:"id" dynamodbav:"id"`
+	EntityType      string `json:"entityType" dynamodbav:"entity_type"`
 	CardId          string `json:"cardID" dynamodbav:"card_id"`
 	SequenceNumber  uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
 	Title           string `json:"title" dynamodbav:"title"`
@@ -52,6 +66,7 @@ type CardAnswerSection struct {
 
 type CardAnswerSectionImage struct {
 	Id                  string `json:"id" dynamodbav:"id"`
+	EntityType          string `json:"entityType" dynamodbav:"entity_type"`
 	CardAnswerSectionId string `json:"cardAnswerSectionID" dynamodbav:"card_answer_section_id"`
 	SequenceNumber      uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
 	CreatedDateTime     string `json:"createdDateTime" dynamodbav:"created_date_time"`
