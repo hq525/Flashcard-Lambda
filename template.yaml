@@ -106,6 +106,10 @@ Resources:
 
   Table:
     Type: AWS::DynamoDB::Table
+    # Card data survives `sam delete` and any update that would replace
+    # the table. Orphaned tables must then be deleted by hand.
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       TableName: !Sub flash-card-app-${StageName}
       BillingMode: PAY_PER_REQUEST
