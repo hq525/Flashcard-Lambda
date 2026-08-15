@@ -26,11 +26,28 @@ Resources:
         UsagePlan:
           CreateUsagePlan: PER_API
       # Preflight OPTIONS is answered by API Gateway (no API key needed);
-      # all other responses get CORS headers from the Lambda itself.
+      # responses that reach the Lambda get CORS headers from it.
       Cors:
         AllowOrigin: "'*'"
         AllowHeaders: "'Content-Type,X-Api-Key'"
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+      # Errors API Gateway generates before invoking the Lambda — invalid or
+      # missing API key, throttling, oversized payload — never reach the CORS
+      # middleware, so without these the browser reports them as opaque
+      # network failures instead of surfacing the status and message.
+      GatewayResponses:
+        DEFAULT_4XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Api-Key'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        DEFAULT_5XX:
+          ResponseParameters:
+            Headers:
+              Access-Control-Allow-Origin: "'*'"
+              Access-Control-Allow-Headers: "'Content-Type,X-Api-Key'"
+              Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
 
   FlashcardFunction:
     Type: AWS::Serverless::Function
