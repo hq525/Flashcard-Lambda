@@ -1,0 +1,2 @@
+# Build artifacts from `sam build`
+.aws-sam/
