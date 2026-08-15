@@ -25,6 +25,14 @@ Resources:
         AddApiKeyRequiredToCorsPreflight: false
         UsagePlan:
           CreateUsagePlan: PER_API
+          # Cost cap: bounds keyed traffic (a frontend bug or leaked key) at
+          # ~$1.30/month worst case. Requests beyond the cap get 429s.
+          Quota:
+            Limit: 10000
+            Period: DAY
+          Throttle:
+            RateLimit: 10
+            BurstLimit: 20
       # Preflight OPTIONS is answered by API Gateway (no API key needed);
       # responses that reach the Lambda get CORS headers from it.
       Cors:
@@ -61,6 +69,8 @@ Resources:
       CodeUri: .
       Timeout: 30
       MemorySize: 128
+      # Cost cap: single-user app; a request flood can't fan out compute.
+      ReservedConcurrentExecutions: 5
       Environment:
         Variables:
           DYNAMODB_TABLE: !Ref Table
@@ -99,6 +109,11 @@ Resources:
     Properties:
       TableName: !Sub flash-card-app-${StageName}
       BillingMode: PAY_PER_REQUEST
+      # Cost cap: requests beyond these per-second ceilings are throttled,
+      # not billed. Generous headroom over single-user traffic.
+      OnDemandThroughput:
+        MaxReadRequestUnits: 100
+        MaxWriteRequestUnits: 50
       AttributeDefinitions:
         - AttributeName: id
           AttributeType: S
