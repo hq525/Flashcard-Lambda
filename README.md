@@ -91,6 +91,8 @@ curl 'http://localhost:8080/categories'
 
 `template.yaml` defines the whole stack per stage: REST API (with API key auth), Lambda (`provided.al2023`/arm64), the DynamoDB table with all five GSIs, and the image bucket (browser-upload CORS + public read).
 
+**Prerequisites:** [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), AWS credentials configured with permission to create the stack's resources (API Gateway, Lambda, DynamoDB, S3, IAM).
+
 ```bash
 sam build
 sam deploy --guided --parameter-overrides StageName=dev   # first time
