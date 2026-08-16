@@ -35,6 +35,9 @@ type Card struct {
 	UpdatedDateTime      string   `json:"updatedDateTime" dynamodbav:"updated_date_time"`
 	LastAccessedDateTime string   `json:"lastAccessedDateTime" dynamodbav:"last_accessed_date_time"`
 	PreviouslyCorrect    bool     `json:"memorized" dynamodbav:"previously_correct"`
+	// Leitner spaced-repetition box (1-5). 0 on legacy records means box 1;
+	// last_accessed_date_time anchors the review interval.
+	LeitnerBox uint8 `json:"leitnerBox" dynamodbav:"leitner_box"`
 }
 
 type Tag struct {

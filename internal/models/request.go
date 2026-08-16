@@ -42,6 +42,8 @@ type UpdateCardRequest struct {
 	TagIds               []string `json:"tags"`
 	PreviouslyCorrect    bool     `json:"memorized"`
 	LastAccessedDateTime string   `json:"lastAccessedDateTime"`
+	// 0 = leave the stored box unchanged (non-study edits omit it).
+	LeitnerBox uint8 `json:"leitnerBox" validate:"max=5"`
 }
 
 type CreateCardAnswerSectionRequest struct {

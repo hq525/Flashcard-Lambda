@@ -48,6 +48,9 @@ func TestNewCardSetsTimestamps(t *testing.T) {
 	if card.EntityType != models.EntityTypeCard {
 		t.Errorf("EntityType = %q, want %q", card.EntityType, models.EntityTypeCard)
 	}
+	if card.LeitnerBox != 1 {
+		t.Errorf("LeitnerBox = %d, want 1 (new cards start in the first box)", card.LeitnerBox)
+	}
 }
 
 func TestCardUpdateAttrs(t *testing.T) {
@@ -74,6 +77,23 @@ func TestCardUpdateAttrs(t *testing.T) {
 	attrs = cfg.UpdateAttrs(models.UpdateCardRequest{Question: "q", LastAccessedDateTime: "2026-07-06T00:00:00Z"})
 	if attrs["last_accessed_date_time"] != "2026-07-06T00:00:00Z" {
 		t.Errorf("last_accessed_date_time = %v", attrs["last_accessed_date_time"])
+	}
+}
+
+func TestCardUpdateAttrsLeitnerBox(t *testing.T) {
+	cfg := cardConfig()
+
+	// Box set: written through so study answers can move the card.
+	attrs := cfg.UpdateAttrs(models.UpdateCardRequest{Question: "q", LeitnerBox: 3})
+	if attrs["leitner_box"] != uint8(3) {
+		t.Errorf("leitner_box = %v, want 3", attrs["leitner_box"])
+	}
+
+	// Box omitted (0): attribute untouched so non-study edits (question,
+	// tags) don't reset scheduling state.
+	attrs = cfg.UpdateAttrs(models.UpdateCardRequest{Question: "q"})
+	if _, ok := attrs["leitner_box"]; ok {
+		t.Error("leitner_box should be omitted when zero")
 	}
 }
 

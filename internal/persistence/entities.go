@@ -104,6 +104,7 @@ func NewCardRepository(s *Store) Repository[models.Card, models.CreateCardReques
 				Question:        req.Question,
 				CreatedDateTime: ts,
 				UpdatedDateTime: ts,
+				LeitnerBox:      1,
 			}
 		},
 		UpdateAttrs: func(req models.UpdateCardRequest) map[string]any {
@@ -115,6 +116,9 @@ func NewCardRepository(s *Store) Repository[models.Card, models.CreateCardReques
 			}
 			if req.LastAccessedDateTime != "" {
 				attrs["last_accessed_date_time"] = req.LastAccessedDateTime
+			}
+			if req.LeitnerBox != 0 {
+				attrs["leitner_box"] = req.LeitnerBox
 			}
 			return attrs
 		},
