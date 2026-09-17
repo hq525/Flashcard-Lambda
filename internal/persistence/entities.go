@@ -90,7 +90,7 @@ func NewDeckRepository(s *Store) Repository[models.Deck, models.CreateDeckReques
 }
 
 func NewCardRepository(s *Store) Repository[models.Card, models.CreateCardRequest, models.UpdateCardRequest] {
-	return NewDynamoRepository(s, EntityConfig[models.Card, models.CreateCardRequest, models.UpdateCardRequest]{
+	return &cardRepository{NewDynamoRepository(s, EntityConfig[models.Card, models.CreateCardRequest, models.UpdateCardRequest]{
 		EntityType: models.EntityTypeCard,
 		ListIndex:  IndexDeckID,
 		ListKey:    "deck_id",
@@ -122,7 +122,7 @@ func NewCardRepository(s *Store) Repository[models.Card, models.CreateCardReques
 			}
 			return attrs
 		},
-	})
+	})}
 }
 
 func NewCardAnswerSectionRepository(s *Store) Repository[models.CardAnswerSection, models.CreateCardAnswerSectionRequest, models.UpdateCardAnswerSectionRequest] {

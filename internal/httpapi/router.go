@@ -22,6 +22,7 @@ type Deps struct {
 	SectionImages  persistence.Repository[models.CardAnswerSectionImage, models.CreateCardAnswerSectionImageRequest, models.UpdateCardAnswerSectionImageRequest]
 	Images         storage.ImageStore
 	Cascade        *service.Cascade
+	Reviews        ReviewService
 }
 
 func NewRouter(d Deps) http.Handler {
@@ -67,6 +68,9 @@ func NewRouter(d Deps) http.Handler {
 	registerResource(mux, "/card-question-images", "/card-question-image", questionImages)
 	registerResource(mux, "/card-answer-section-images", "/card-answer-section-image", sectionImages)
 	mux.HandleFunc("GET /presigned-url", getPresignedURL(d.Images))
+	if d.Reviews != nil {
+		registerReviewRoutes(mux, d.Reviews)
+	}
 
 	return withCORS(mux)
 }

@@ -20,6 +20,9 @@ type Cascade struct {
 	QuestionImages persistence.Repository[models.CardQuestionImage, models.CreateCardQuestionImageRequest, models.UpdateCardQuestionImageRequest]
 	SectionImages  persistence.Repository[models.CardAnswerSectionImage, models.CreateCardAnswerSectionImageRequest, models.UpdateCardAnswerSectionImageRequest]
 	Images         storage.ImageStore
+	Reviews        interface {
+		DeleteReviews(context.Context, string) error
+	}
 }
 
 // Children are deleted before their parent so a mid-cascade failure leaves
@@ -74,6 +77,11 @@ func (c *Cascade) DeleteCard(ctx context.Context, id string) (*models.Card, erro
 		}
 	}
 
+	if c.Reviews != nil {
+		if err := c.Reviews.DeleteReviews(ctx, id); err != nil {
+			return nil, err
+		}
+	}
 	return c.Cards.Delete(ctx, id)
 }
 

@@ -5,6 +5,7 @@ const (
 	EntityTypeDeck                   = "deck"
 	EntityTypeTag                    = "tag"
 	EntityTypeCard                   = "card"
+	EntityTypeCardReview             = "card_review"
 	EntityTypeCardAnswerSection      = "card_answer_section"
 	EntityTypeCardQuestionImage      = "card_question_image"
 	EntityTypeCardAnswerSectionImage = "card_answer_section_image"
@@ -37,7 +38,11 @@ type Card struct {
 	PreviouslyCorrect    bool     `json:"memorized" dynamodbav:"previously_correct"`
 	// Leitner spaced-repetition box (1-5). 0 on legacy records means box 1;
 	// last_accessed_date_time anchors the review interval.
-	LeitnerBox uint8 `json:"leitnerBox" dynamodbav:"leitner_box"`
+	LeitnerBox     uint8         `json:"leitnerBox" dynamodbav:"leitner_box"`
+	Schedule       *CardSchedule `json:"schedule,omitempty" dynamodbav:"schedule,omitempty"`
+	ReviewRevision uint64        `json:"reviewRevision" dynamodbav:"review_revision"`
+	// Internal chain head permits consistent, retryable history cleanup without a table scan.
+	LastReviewId string `json:"-" dynamodbav:"last_review_id,omitempty"`
 }
 
 type Tag struct {

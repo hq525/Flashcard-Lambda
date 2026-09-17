@@ -42,6 +42,8 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 	sections := persistence.NewCardAnswerSectionRepository(store)
 	questionImages := persistence.NewCardQuestionImageRepository(store)
 	sectionImages := persistence.NewCardAnswerSectionImageRepository(store)
+	reviewStore := persistence.NewReviewStore(store)
+	reviews := &service.Reviews{Store: reviewStore}
 
 	cascade := &service.Cascade{
 		Categories:     categories,
@@ -51,6 +53,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 		QuestionImages: questionImages,
 		SectionImages:  sectionImages,
 		Images:         images,
+		Reviews:        reviewStore,
 	}
 
 	return httpapi.NewRouter(httpapi.Deps{
@@ -63,5 +66,6 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 		SectionImages:  sectionImages,
 		Images:         images,
 		Cascade:        cascade,
+		Reviews:        reviews,
 	}), nil
 }

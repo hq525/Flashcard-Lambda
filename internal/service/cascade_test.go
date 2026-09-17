@@ -179,3 +179,32 @@ func TestDeleteQuestionImageNotFoundSkipsS3(t *testing.T) {
 		t.Errorf("no S3 delete expected for missing record, got %v", images.DeletedURL)
 	}
 }
+
+func TestDeleteCardRemovesReviewHistory(t *testing.T) {
+	cascade, _, deleted := buildFixture()
+	history := &memoryReviewStore{reviews: map[string]models.CardReview{
+		"card-1/r1": {CardId: "card-1", RequestId: "r1"},
+		"other/r2":  {CardId: "other", RequestId: "r2"},
+	}}
+	cascade.Reviews = history
+	if _, err := cascade.DeleteCard(context.Background(), "card-1"); err != nil {
+		t.Fatal(err)
+	}
+	if len(history.reviews) != 1 || history.reviews["other/r2"].CardId != "other" {
+		t.Fatalf("incorrect remaining history: %+v", history.reviews)
+	}
+	if len(*deleted["cards"]) != 1 {
+		t.Fatal("card was not deleted")
+	}
+}
+
+func TestDeleteCardKeepsParentIfReviewCleanupFails(t *testing.T) {
+	cascade, _, deleted := buildFixture()
+	cascade.Reviews = &memoryReviewStore{err: errors.New("review cleanup failed")}
+	if _, err := cascade.DeleteCard(context.Background(), "card-1"); err == nil {
+		t.Fatal("cleanup failure swallowed")
+	}
+	if len(*deleted["cards"]) != 0 {
+		t.Fatal("parent deleted despite failed history cleanup")
+	}
+}

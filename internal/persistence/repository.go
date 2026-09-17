@@ -65,9 +65,9 @@ func (r *DynamoRepository[T, C, U]) Create(ctx context.Context, req C) (*T, erro
 }
 
 func (r *DynamoRepository[T, C, U]) Update(ctx context.Context, id string, req U) (*T, error) {
-	return UpdateItem[T](ctx, r.store, id, r.cfg.UpdateAttrs(req))
+	return UpdateItem[T](ctx, r.store, id, r.cfg.EntityType, r.cfg.UpdateAttrs(req))
 }
 
 func (r *DynamoRepository[T, C, U]) Delete(ctx context.Context, id string) (*T, error) {
-	return DeleteItem[T](ctx, r.store, id)
+	return DeleteItem[T](ctx, r.store, id, r.cfg.EntityType)
 }

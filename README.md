@@ -29,6 +29,7 @@ Handlers depend only on the `Repository` and `ImageStore` interfaces, so swappin
 Category
 └── Deck
     └── Card
+        ├── CardReview (immutable FSRS review history)
         ├── CardAnswerSection (ordered by sequence_number)
         │   └── CardAnswerSectionImage (ordered by sequence_number)
         └── CardQuestionImage (ordered by sequence_number)
@@ -64,6 +65,30 @@ Every resource follows the same pattern: `GET /<plural>` (list), `GET/POST/PUT/D
 
 **Response conventions:** JSON everywhere (errors are `{"message": "..."}`), CORS headers on every response including errors, `201` on create, `404` when an id doesn't exist, `400` for missing params/validation failures, `422` for malformed JSON. PUT bodies are validated like POST bodies (required fields enforced).
 
+## Spaced repetition
+
+Reviews use **FSRS 6**, via the pinned `go-fsrs/v4 v4.0.0` library. The server uses default model weights, a 90% desired retention target, and one ten-minute learning/relearning step. Interval fuzz is disabled so previews and submissions use the same calculation. Successful reviews can grow beyond the former 16-day limit. Early reviews use FSRS's elapsed-time and same-day memory rules rather than advancing a fixed box.
+
+The study screen offers **Again** (forgot or incorrect), **Hard** (correct with effort), **Good** (correct), and **Easy** (correct with ease). Each choice previews its next interval. Short learning/relearning steps return to the same session when due; if there is nothing else to study, a countdown and **Finish now** let the user wait or leave with progress saved.
+
+| Method and route | Request / response |
+|---|---|
+| `GET /card-review-options?cardId=…` | `{cardId, revision, generatedAt, options:[{rating,dueAt,intervalSeconds,state}]}`; read only |
+| `POST /card-review?cardId=…` | Body `{reviewId,rating,expectedRevision}`; returns `{card,review}` |
+| `GET /card-reviews?cardId=…` | Review history in revision order; `[]` before the first review |
+
+Ratings are lowercase `again`, `hard`, `good`, `easy`. `expectedRevision` is required (zero for cards without FSRS history), and `reviewId` is a unique identifier for one attempt, reused unchanged on network retries. A stale revision or reuse of an ID for a different rating returns `409`. The browser supplies neither timestamps nor scheduling state. Preview intervals are estimates at `generatedAt`; a later submission uses the actual server review time.
+
+Cards store `schedule` (due time, difficulty, stability, stage, counts and last review) and `reviewRevision`. Each actual review atomically updates that state and creates an immutable `card_review` entity with the rating, server timestamp and before/after schedules. Content edits preserve FSRS state, and reviews do not rewrite question text or tags. History is listed through the existing `card_id-index` (eventually consistent); internal history links allow card deletion to clean up reviews with consistent reads, even immediately after saving. Failed deletion can be retried; while its cleanup is pending, the card rejects new reviews.
+
+### Migration and rollout
+
+Deploy the backend before the frontend. No table/index migration, bulk backfill or mass rescheduling is required. Existing cards without `schedule` keep their original last-review-plus-Leitner-interval due date until their next real review. Invalid or future legacy timestamps are treated as new and due now.
+
+On that first review, the previous interval provides a conservative starting stability estimate, with neutral difficulty; legacy review counts and ratings are not invented. FSRS counts and recorded history begin with that actual review. This uses default FSRS weights, not a model trained on personal history; the saved records allow future parameter fitting. Existing card content and image URLs are unchanged.
+
+The old general card PUT remains compatible for cards that have not migrated. Once a card has FSRS state, PUT only changes card content; clients must use the review endpoint to record recall and change scheduling.
+
 ## Environment Variables
 
 | Variable | Description |
@@ -73,7 +98,7 @@ Every resource follows the same pattern: `GET /<plural>` (list), `GET/POST/PUT/D
 
 ## Development
 
-**Prerequisites:** Go 1.24+, AWS credentials configured
+**Prerequisites:** Go 1.26+ (required by the FSRS library), AWS credentials configured
 
 ```bash
 # Run tests / vet
@@ -157,4 +182,5 @@ Makefile        # sam build target
 - [`aws-lambda-go-api-proxy`](https://github.com/awslabs/aws-lambda-go-api-proxy) — API Gateway events ↔ `http.Handler`
 - [`aws-sdk-go-v2`](https://github.com/aws/aws-sdk-go-v2) — DynamoDB and S3 clients
 - [`google/uuid`](https://github.com/google/uuid) — entity IDs
+- [`go-fsrs/v4`](https://github.com/open-spaced-repetition/go-fsrs) — FSRS 6 scheduling and learning/relearning steps
 - [`go-playground/validator.v9`](https://github.com/go-playground/validator) — request validation

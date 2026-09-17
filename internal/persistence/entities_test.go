@@ -31,7 +31,7 @@ func TestNewCategorySetsIDAndEntityType(t *testing.T) {
 }
 
 func cardConfig() EntityConfig[models.Card, models.CreateCardRequest, models.UpdateCardRequest] {
-	repo := NewCardRepository(&Store{}).(*DynamoRepository[models.Card, models.CreateCardRequest, models.UpdateCardRequest])
+	repo := NewCardRepository(&Store{}).(*cardRepository)
 	return repo.cfg
 }
 

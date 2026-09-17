@@ -1,6 +1,6 @@
 module flashcard_lambda
 
-go 1.24
+go 1.26
 
 require (
 	github.com/aws/aws-lambda-go v1.47.0
@@ -12,6 +12,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/s3 v1.101.0
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/google/uuid v1.6.0
+	github.com/open-spaced-repetition/go-fsrs/v4 v4.0.0
 	gopkg.in/go-playground/validator.v9 v9.31.0
 )
 

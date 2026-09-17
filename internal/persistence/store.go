@@ -63,9 +63,9 @@ func PutItem(ctx context.Context, s *Store, entity any) error {
 	return err
 }
 
-// UpdateItem sets the given attributes on the item with the given id and
-// returns the updated item, or nil if the item does not exist.
-func UpdateItem[T any](ctx context.Context, s *Store, id string, attrs map[string]any) (*T, error) {
+// UpdateItem sets attributes only on an existing item of the required entity
+// type. Missing items and IDs belonging to another entity type return nil.
+func UpdateItem[T any](ctx context.Context, s *Store, id, entityType string, attrs map[string]any) (*T, error) {
 	key, err := idKey(id)
 	if err != nil {
 		return nil, err
@@ -77,7 +77,10 @@ func UpdateItem[T any](ctx context.Context, s *Store, id string, attrs map[strin
 	}
 	expr, err := expression.NewBuilder().
 		WithUpdate(update).
-		WithCondition(expression.AttributeExists(expression.Name("id"))).
+		WithCondition(expression.And(
+			expression.AttributeExists(expression.Name("id")),
+			expression.Name("entity_type").Equal(expression.Value(entityType)),
+		)).
 		Build()
 	if err != nil {
 		return nil, err
@@ -107,20 +110,35 @@ func UpdateItem[T any](ctx context.Context, s *Store, id string, attrs map[strin
 	return item, nil
 }
 
-// DeleteItem removes the item with the given id and returns the deleted
-// item, or nil if the item did not exist.
-func DeleteItem[T any](ctx context.Context, s *Store, id string) (*T, error) {
+// DeleteItem removes an existing item only when its entity type matches and
+// returns it. Missing items and IDs belonging to another entity type return nil.
+func DeleteItem[T any](ctx context.Context, s *Store, id, entityType string) (*T, error) {
 	key, err := idKey(id)
 	if err != nil {
 		return nil, err
 	}
 
+	expr, err := expression.NewBuilder().WithCondition(expression.And(
+		expression.AttributeExists(expression.Name("id")),
+		expression.Name("entity_type").Equal(expression.Value(entityType)),
+	)).Build()
+	if err != nil {
+		return nil, err
+	}
+
 	res, err := s.DB.DeleteItem(ctx, &dynamodb.DeleteItemInput{
-		TableName:    aws.String(s.Table),
-		Key:          key,
-		ReturnValues: dynamodbTypes.ReturnValueAllOld,
+		TableName:                 aws.String(s.Table),
+		Key:                       key,
+		ConditionExpression:       expr.Condition(),
+		ExpressionAttributeNames:  expr.Names(),
+		ExpressionAttributeValues: expr.Values(),
+		ReturnValues:              dynamodbTypes.ReturnValueAllOld,
 	})
 	if err != nil {
+		var condCheckFailed *dynamodbTypes.ConditionalCheckFailedException
+		if errors.As(err, &condCheckFailed) {
+			return nil, nil
+		}
 		return nil, err
 	}
 	if res.Attributes == nil {
