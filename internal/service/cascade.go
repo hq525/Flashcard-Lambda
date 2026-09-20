@@ -99,28 +99,48 @@ func (c *Cascade) DeleteSection(ctx context.Context, id string) (*models.CardAns
 }
 
 func (c *Cascade) DeleteQuestionImage(ctx context.Context, id string) (*models.CardQuestionImage, error) {
+	existing, err := c.QuestionImages.Get(ctx, id)
+	if err != nil || existing == nil {
+		return existing, err
+	}
+	if err := storage.ValidateImageKey(id, existing.StorageKey); err != nil {
+		return nil, err
+	}
 	image, err := c.QuestionImages.Delete(ctx, id)
 	if err != nil || image == nil {
 		return image, err
 	}
-	c.deleteObject(ctx, image.ImageURL)
+	if err := storage.ValidateImageKey(id, image.StorageKey); err != nil {
+		return nil, err
+	}
+	c.deleteObject(ctx, image.StorageKey)
 	return image, nil
 }
 
 func (c *Cascade) DeleteSectionImage(ctx context.Context, id string) (*models.CardAnswerSectionImage, error) {
+	existing, err := c.SectionImages.Get(ctx, id)
+	if err != nil || existing == nil {
+		return existing, err
+	}
+	if err := storage.ValidateImageKey(id, existing.StorageKey); err != nil {
+		return nil, err
+	}
 	image, err := c.SectionImages.Delete(ctx, id)
 	if err != nil || image == nil {
 		return image, err
 	}
-	c.deleteObject(ctx, image.ImageURL)
+	if err := storage.ValidateImageKey(id, image.StorageKey); err != nil {
+		return nil, err
+	}
+	c.deleteObject(ctx, image.StorageKey)
 	return image, nil
 }
 
-func (c *Cascade) deleteObject(ctx context.Context, imageURL string) {
-	if imageURL == "" {
+func (c *Cascade) deleteObject(ctx context.Context, key string) {
+	if key == "" {
 		return
 	}
-	if err := c.Images.Delete(ctx, imageURL); err != nil {
-		log.Printf("Failed to delete S3 object for %s (record already deleted): %v", imageURL, err)
+	if err := c.Images.Delete(ctx, key); err != nil {
+		log.Printf("Failed to delete S3 object for %s (record already deleted): %v", key, err)
 	}
 }

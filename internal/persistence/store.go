@@ -2,6 +2,7 @@ package persistence
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -26,20 +27,22 @@ func idKey(id string) (map[string]dynamodbTypes.AttributeValue, error) {
 	return map[string]dynamodbTypes.AttributeValue{"id": key}, nil
 }
 
-func GetItem[T any](ctx context.Context, s *Store, id string) (*T, error) {
+func GetItem[T any](ctx context.Context, s *Store, id, entityType string) (*T, error) {
 	key, err := idKey(id)
 	if err != nil {
 		return nil, err
 	}
 
 	result, err := s.DB.GetItem(ctx, &dynamodb.GetItemInput{
-		TableName: aws.String(s.Table),
-		Key:       key,
+		TableName:      aws.String(s.Table),
+		Key:            key,
+		ConsistentRead: aws.Bool(true),
 	})
 	if err != nil {
 		return nil, err
 	}
-	if result.Item == nil {
+	storedType, ok := result.Item["entity_type"].(*dynamodbTypes.AttributeValueMemberS)
+	if !ok || storedType.Value != entityType {
 		return nil, nil
 	}
 
@@ -180,8 +183,28 @@ func QueryIndex[T any](ctx context.Context, s *Store, index, keyAttr, keyValue, 
 		ExpressionAttributeValues: expr.Values(),
 	}
 
-	var items []T
-	for {
+	return queryBounded[T](ctx, s, input)
+}
+
+const (
+	maxResultItems    = 1000
+	maxQueryPages     = 50
+	maxQueryPageItems = 100
+	// MaxResultBytes bounds collected records. The HTTP layer separately checks
+	// the escaped API Gateway/Lambda response envelope before writing success.
+	MaxResultBytes = 4 * 1024 * 1024
+)
+
+// ErrResultLimit indicates that a complete result cannot be returned within the
+// request budget. Callers must not treat it as an empty or partial list.
+var ErrResultLimit = errors.New("result exceeds the supported item, page, or byte limit")
+
+func queryBounded[T any](ctx context.Context, s *Store, input *dynamodb.QueryInput) ([]T, error) {
+	items := make([]T, 0)
+	resultBytes := 2 // JSON array brackets.
+	for pageNumber := 0; pageNumber < maxQueryPages; pageNumber++ {
+		// A single extra item proves that the complete list exceeds the cap.
+		input.Limit = aws.Int32(int32(min(maxQueryPageItems, maxResultItems-len(items)+1)))
 		res, err := s.DB.Query(ctx, input)
 		if err != nil {
 			return nil, err
@@ -191,13 +214,26 @@ func QueryIndex[T any](ctx context.Context, s *Store, index, keyAttr, keyValue, 
 		if err = attributevalue.UnmarshalListOfMaps(res.Items, &page); err != nil {
 			return nil, err
 		}
+		if len(items)+len(page) > maxResultItems {
+			return nil, ErrResultLimit
+		}
+		for _, item := range page {
+			encoded, err := json.Marshal(item)
+			if err != nil {
+				return nil, err
+			}
+			resultBytes += len(encoded) + 1 // Include a separator (conservative for the first item).
+			if resultBytes > MaxResultBytes {
+				return nil, ErrResultLimit
+			}
+		}
 		items = append(items, page...)
 
-		if res.LastEvaluatedKey == nil {
-			break
+		if len(res.LastEvaluatedKey) == 0 {
+			return items, nil
 		}
 		input.ExclusiveStartKey = res.LastEvaluatedKey
 	}
 
-	return items, nil
+	return nil, ErrResultLimit
 }

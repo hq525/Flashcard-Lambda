@@ -1,0 +1,41 @@
+package storage
+
+import (
+ "context"
+ "io"
+ "net/http"
+ "net/url"
+ "strings"
+ "testing"
+ "github.com/aws/aws-sdk-go-v2/aws"
+ "github.com/aws/aws-sdk-go-v2/credentials"
+ "github.com/aws/aws-sdk-go-v2/service/s3"
+)
+
+type auditHTTPClient func(*http.Request)(*http.Response,error)
+func (f auditHTTPClient) Do(r *http.Request)(*http.Response,error) { return f(r) }
+
+func TestSecurityAuditPresignConstraints(t *testing.T) {
+ client := s3.New(s3.Options{Region:"us-east-1",Credentials:credentials.NewStaticCredentialsProvider("audit-dummy-access","audit-dummy-secret",""),HTTPClient:auditHTTPClient(func(r *http.Request)(*http.Response,error){t.Fatal("unexpected network attempt");return nil,nil})})
+ store := NewS3ImageStore(client,"audit-only-bucket")
+ result,err := store.PresignUpload(context.Background(),QuestionImagePrefix,"image.png","image/png")
+ if err!=nil {t.Fatal(err)}
+ parsed,_ := url.Parse(result.UploadURL)
+ signed := parsed.Query().Get("X-Amz-SignedHeaders")
+ t.Logf("Actual signed headers: %s; expiry seconds: %s",signed,parsed.Query().Get("X-Amz-Expires"))
+ if signed != "host" {t.Fatalf("signed headers changed: %s", signed)}
+ t.Log("CONFIRMED: presigned PUT binds neither Content-Type nor Content-Length and has no POST content-length-range policy")
+}
+
+func TestSecurityAuditDeleteUsesSuppliedBucketAndKey(t *testing.T) {
+ var called string
+ client := s3.New(s3.Options{Region:"us-east-1",Credentials:aws.AnonymousCredentials{},RetryMaxAttempts:1,HTTPClient:auditHTTPClient(func(r *http.Request)(*http.Response,error){
+  called=r.Method+" "+r.URL.Host+r.URL.Path
+  return &http.Response{StatusCode:204,Header:http.Header{},Body:io.NopCloser(strings.NewReader("")),Request:r},nil
+ })})
+ store := NewS3ImageStore(client,"configured-media-bucket")
+ err := store.Delete(context.Background(),"https://flash-card-app-answer-images.s3.amazonaws.com/unrelated/private-object.png")
+ if err!=nil {t.Fatal(err)}
+ if !strings.Contains(called,"flash-card-app-answer-images") || !strings.HasSuffix(called,"/unrelated/private-object.png") {t.Fatal(called)}
+ t.Logf("CONFIRMED SDK request to fake transport: %s (configured bucket was configured-media-bucket)",called)
+}

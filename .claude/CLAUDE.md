@@ -18,7 +18,7 @@ go vet ./...
 go mod tidy
 
 # Run the API locally (needs AWS credentials + env vars, see README)
-go run ./cmd/server -addr :8080
+go run ./cmd/server -addr 127.0.0.1:8080
 
 # Build/deploy for AWS (via SAM; uses Makefile's build-FlashcardFunction)
 sam build && sam deploy
@@ -34,13 +34,13 @@ Go backend for a flashcard app. The core is a standard `http.Handler`; `cmd/lamb
 3. `internal/httpapi/` — `ServeMux` routing (Go 1.22 method patterns), CORS middleware (headers on ALL responses incl. errors), generic `Resource[T, C, U]` CRUD handlers, validator.v9 request validation
 4. `internal/persistence/` — `Repository[T, C, U]` interface + generic DynamoDB implementation; per-entity configs (GSI names, entity constructors, update-attribute maps) live in `entities.go`
 5. `internal/service/cascade.go` — cascading deletes (children before parent; S3 object deletes best-effort after record delete)
-6. `internal/storage/` — `ImageStore` interface + S3 impl; deletes parse bucket+key from the stored image URL (legacy two-bucket data still works)
+6. `internal/storage/` — `ImageStore` interface + S3 impl; image bytes are validated/re-encoded; deletes accept immutable record-bound keys only; reads use five-minute signed URLs
 
 **Key design points:**
 - Single DynamoDB table (PK `id`), all entities carry `entity_type`. List operations are GSI **Queries**, never Scans. GSIs: `entity_type-index`, `category_id-index`, `deck_id-index`, `card_id-index` (shared by answer sections + question images → needs `entity_type` filter), `card_answer_section_id-index`
-- Config via env vars `DYNAMODB_TABLE` and `S3_BUCKET` (`internal/config`); single bucket with `question-images/` and `answer-images/` prefixes
+- Config via `DYNAMODB_TABLE`, `S3_BUCKET`, `AUTH_ISSUER`, `AUTH_CLIENT_ID`, `ALLOWED_ORIGIN` (`internal/config`); private bucket with managed `images/` prefix
 - Tests use in-memory fakes from `internal/testutil` against the real router/services — no AWS needed
-- `template.yaml` (SAM) defines the whole stack including API key auth; API contract details and migration notes are in README.md
+- `template.yaml` (SAM) defines the whole stack including Cognito owner authentication and private media; API contract details and migration notes are in README.md
 
 **Data model hierarchy:** Category → Deck → Card (with AnswerSections → AnswerSectionImages, QuestionImages, and Tags)
 

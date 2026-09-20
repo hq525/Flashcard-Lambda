@@ -9,8 +9,10 @@ Parameters:
     AllowedValues: [dev, prod]
     Description: Deployment stage; also suffixes the table and bucket names.
 
-Conditions:
-  IsProd: !Equals [!Ref StageName, prod]
+  FrontendOrigin:
+    Type: String
+    Description: Exact frontend origin, without a trailing slash (production uses https://main.d21qooye31nta2.amplifyapp.com).
+    AllowedPattern: '^https://[A-Za-z0-9.-]+(:[0-9]+)?$|^http://localhost:[0-9]+$'
 
 Resources:
   Api:
@@ -18,44 +20,111 @@ Resources:
     Properties:
       Name: !Sub flashcard-api-${StageName}
       StageName: !Ref StageName
-      # Every method requires an x-api-key header. Retrieve the key value
-      # with: aws apigateway get-api-keys --include-values
       Auth:
-        ApiKeyRequired: true
-        AddApiKeyRequiredToCorsPreflight: false
-        UsagePlan:
-          CreateUsagePlan: PER_API
-          # Cost cap: bounds keyed traffic (a frontend bug or leaked key) at
-          # ~$1.30/month worst case. Requests beyond the cap get 429s.
-          Quota:
-            Limit: 10000
-            Period: DAY
-          Throttle:
-            RateLimit: 10
-            BurstLimit: 20
-      # Preflight OPTIONS is answered by API Gateway (no API key needed);
-      # responses that reach the Lambda get CORS headers from it.
+        DefaultAuthorizer: OwnerAuthorizer
+        AddDefaultAuthorizerToCorsPreflight: false
+        Authorizers:
+          OwnerAuthorizer:
+            UserPoolArn: !GetAtt OwnerUserPool.Arn
+            Identity:
+              Header: Authorization
+              ValidationExpression: !Sub '^${OwnerUserPoolClient}$'
+      BinaryMediaTypes: ['image/png', 'image/jpeg', 'image/gif', 'image/webp']
+      MethodSettings:
+        - ResourcePath: '/*'
+          HttpMethod: '*'
+          ThrottlingRateLimit: 10
+          ThrottlingBurstLimit: 20
+          # Basic stage metrics remain available without paid method metrics.
+          MetricsEnabled: false
+          DataTraceEnabled: false
+      # Stage throttles are abuse guardrails, not guaranteed billing caps.
       Cors:
-        AllowOrigin: "'*'"
-        AllowHeaders: "'Content-Type,X-Api-Key'"
+        AllowOrigin: !Sub "'${FrontendOrigin}'"
+        AllowHeaders: "'Content-Type,Authorization'"
         AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
-      # Errors API Gateway generates before invoking the Lambda — invalid or
-      # missing API key, throttling, oversized payload — never reach the CORS
-      # middleware, so without these the browser reports them as opaque
-      # network failures instead of surfacing the status and message.
       GatewayResponses:
         DEFAULT_4XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Content-Type,X-Api-Key'"
+              Access-Control-Allow-Origin: !Sub "'${FrontendOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              Cache-Control: "'no-store'"
+              X-Content-Type-Options: "'nosniff'"
         DEFAULT_5XX:
           ResponseParameters:
             Headers:
-              Access-Control-Allow-Origin: "'*'"
-              Access-Control-Allow-Headers: "'Content-Type,X-Api-Key'"
+              Access-Control-Allow-Origin: !Sub "'${FrontendOrigin}'"
+              Access-Control-Allow-Headers: "'Content-Type,Authorization'"
               Access-Control-Allow-Methods: "'GET,POST,PUT,DELETE,OPTIONS'"
+              Cache-Control: "'no-store'"
+              X-Content-Type-Options: "'nosniff'"
+
+  OwnerUserPool:
+    Type: AWS::Cognito::UserPool
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
+    Properties:
+      UserPoolName: !Sub flashcard-owner-${StageName}
+      UsernameAttributes: [email]
+      AutoVerifiedAttributes: [email]
+      AdminCreateUserConfig:
+        AllowAdminCreateUserOnly: true
+      AccountRecoverySetting:
+        RecoveryMechanisms:
+          - Name: verified_email
+            Priority: 1
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 14
+          RequireLowercase: true
+          RequireUppercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+          TemporaryPasswordValidityDays: 3
+      MfaConfiguration: OPTIONAL
+      EnabledMfas: [SOFTWARE_TOKEN_MFA]
+
+  OwnerGroup:
+    Type: AWS::Cognito::UserPoolGroup
+    Properties:
+      GroupName: owner
+      Description: The single account authorized to access this private library.
+      UserPoolId: !Ref OwnerUserPool
+
+  OwnerUserPoolClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      UserPoolId: !Ref OwnerUserPool
+      ClientName: !Sub flashcard-browser-${StageName}
+      GenerateSecret: false
+      SupportedIdentityProviders: [COGNITO]
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthFlows: [code]
+      AllowedOAuthScopes: [openid, email]
+      CallbackURLs: [!Sub '${FrontendOrigin}/auth/callback']
+      LogoutURLs: [!Sub '${FrontendOrigin}/']
+      PreventUserExistenceErrors: ENABLED
+      EnableTokenRevocation: true
+      ExplicitAuthFlows: [ALLOW_USER_SRP_AUTH]
+      RefreshTokenRotation:
+        Feature: ENABLED
+        RetryGracePeriodSeconds: 10
+      IdTokenValidity: 5
+      AccessTokenValidity: 5
+      RefreshTokenValidity: 1
+      TokenValidityUnits:
+        IdToken: minutes
+        AccessToken: minutes
+        RefreshToken: days
+
+  OwnerUserPoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      UserPoolId: !Ref OwnerUserPool
+      Domain: !Sub flashcards-${AWS::AccountId}-${AWS::Region}-${StageName}
+      ManagedLoginVersion: 1
 
   FlashcardFunction:
     Type: AWS::Serverless::Function
@@ -68,28 +137,31 @@ Resources:
       Architectures: [arm64]
       CodeUri: .
       Timeout: 30
-      MemorySize: 128
-      # Cost cap: single-user app; a request flood can't fan out compute.
+      MemorySize: 512
+      # Bound concurrent work; this does not cap S3 storage or overall billing.
       ReservedConcurrentExecutions: 5
       Environment:
         Variables:
           DYNAMODB_TABLE: !Ref Table
           S3_BUCKET: !Ref ImageBucket
+          AUTH_ISSUER: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${OwnerUserPool}
+          AUTH_CLIENT_ID: !Ref OwnerUserPoolClient
+          ALLOWED_ORIGIN: !Ref FrontendOrigin
       Policies:
-        - DynamoDBCrudPolicy:
-            TableName: !Ref Table
-        - S3CrudPolicy:
-            BucketName: !Ref ImageBucket
-        # Legacy buckets from the pre-consolidation layout: deletes parse
-        # the bucket from the stored image URL, so the function needs
-        # delete rights there until old images are gone. Remove once all
-        # legacy images are deleted or migrated.
         - Statement:
             - Effect: Allow
-              Action: s3:DeleteObject
+              Action:
+                - dynamodb:GetItem
+                - dynamodb:PutItem
+                - dynamodb:UpdateItem
+                - dynamodb:DeleteItem
+                - dynamodb:Query
               Resource:
-                - !If [IsProd, 'arn:aws:s3:::flash-card-app-images/*', 'arn:aws:s3:::flash-card-app-images-dev/*']
-                - !If [IsProd, 'arn:aws:s3:::flash-card-app-answer-images/*', 'arn:aws:s3:::flash-card-app-answer-images-dev/*']
+                - !GetAtt Table.Arn
+                - !Sub ${Table.Arn}/index/*
+            - Effect: Allow
+              Action: [s3:GetObject, s3:PutObject, s3:DeleteObject]
+              Resource: !Sub ${ImageBucket.Arn}/images/*
       Events:
         Root:
           Type: Api
@@ -113,8 +185,12 @@ Resources:
     Properties:
       TableName: !Sub flash-card-app-${StageName}
       BillingMode: PAY_PER_REQUEST
-      # Cost cap: requests beyond these per-second ceilings are throttled,
-      # not billed. Generous headroom over single-user traffic.
+      PointInTimeRecoverySpecification:
+        PointInTimeRecoveryEnabled: true
+      TimeToLiveSpecification:
+        AttributeName: expires_at
+        Enabled: true
+      # Throughput guardrails; monitor storage, backup and total costs separately.
       OnDemandThroughput:
         MaxReadRequestUnits: 100
         MaxWriteRequestUnits: 50
@@ -168,22 +244,36 @@ Resources:
 
   ImageBucket:
     Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    UpdateReplacePolicy: Retain
     Properties:
       BucketName: !Sub flash-card-app-media-${StageName}
+      VersioningConfiguration:
+        Status: Enabled
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          - ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          - Id: ExpireRecoverableOldVersions
+            Status: Enabled
+            NoncurrentVersionExpiration:
+              NoncurrentDays: 30
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 1
       CorsConfiguration:
         CorsRules:
-          - AllowedOrigins: ['*']
-            AllowedMethods: [GET, PUT]
+          - AllowedOrigins: [!Ref FrontendOrigin]
+            AllowedMethods: [GET, HEAD]
             AllowedHeaders: ['*']
-            MaxAge: 3600
+            MaxAge: 300
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         IgnorePublicAcls: true
-        BlockPublicPolicy: false
-        RestrictPublicBuckets: false
+        BlockPublicPolicy: true
+        RestrictPublicBuckets: true
 
-  # Images are served directly from S3 by their stored URL. For a
-  # locked-down setup, front the bucket with CloudFront and drop this.
   ImageBucketPolicy:
     Type: AWS::S3::BucketPolicy
     Properties:
@@ -191,10 +281,24 @@ Resources:
       PolicyDocument:
         Version: '2012-10-17'
         Statement:
-          - Effect: Allow
+          # Keep outstanding legacy presigned PUT grants revoked throughout
+          # cutover and afterwards; managed uploads use images/* instead.
+          - Sid: DenyLegacyUploads
+            Effect: Deny
             Principal: '*'
-            Action: s3:GetObject
-            Resource: !Sub ${ImageBucket.Arn}/*
+            Action: s3:PutObject
+            Resource:
+              - !Sub ${ImageBucket.Arn}/question-images/*
+              - !Sub ${ImageBucket.Arn}/answer-images/*
+          - Effect: Deny
+            Principal: '*'
+            Action: s3:*
+            Resource:
+              - !GetAtt ImageBucket.Arn
+              - !Sub ${ImageBucket.Arn}/*
+            Condition:
+              Bool:
+                aws:SecureTransport: false
 
 Outputs:
   ApiUrl:
@@ -204,3 +308,13 @@ Outputs:
     Value: !Ref Table
   BucketName:
     Value: !Ref ImageBucket
+  AuthIssuer:
+    Value: !Sub https://cognito-idp.${AWS::Region}.amazonaws.com/${OwnerUserPool}
+  AuthClientId:
+    Value: !Ref OwnerUserPoolClient
+  AuthDomain:
+    Value: !Sub https://${OwnerUserPoolDomain}.auth.${AWS::Region}.amazoncognito.com
+  UserPoolId:
+    Value: !Ref OwnerUserPool
+  MediaOrigin:
+    Value: !Sub https://${ImageBucket}.s3.${AWS::Region}.amazonaws.com

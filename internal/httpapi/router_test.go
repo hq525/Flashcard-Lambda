@@ -10,7 +10,6 @@ import (
 
 	"flashcard_lambda/internal/models"
 	"flashcard_lambda/internal/service"
-	"flashcard_lambda/internal/storage"
 	"flashcard_lambda/internal/testutil"
 )
 
@@ -44,6 +43,7 @@ func newFixture() *fixture {
 		Images:         f.images,
 	}
 	f.router = NewRouter(Deps{
+		Authenticate: allowTestRequests, AllowedOrigin: "http://localhost:5173",
 		Categories:     f.categories,
 		Decks:          f.decks,
 		Tags:           tags,
@@ -65,6 +65,7 @@ func (f *fixture) do(method, target, body string) *httptest.ResponseRecorder {
 		req = httptest.NewRequest(method, target, strings.NewReader(body))
 	}
 	rec := httptest.NewRecorder()
+	req.Header.Set("Origin", "http://localhost:5173")
 	f.router.ServeHTTP(rec, req)
 	return rec
 }
@@ -118,7 +119,7 @@ func TestErrorResponsesCarryCORSHeaders(t *testing.T) {
 		"404 not found":     f.do("GET", "/category?id=missing", ""),
 		"404 bad route":     f.do("GET", "/nope", ""),
 	} {
-		if rec.Header().Get("Access-Control-Allow-Origin") != "*" {
+		if rec.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
 			t.Errorf("%s: missing Access-Control-Allow-Origin header", name)
 		}
 	}
@@ -207,11 +208,14 @@ func TestDeleteCategoryCascadesFromRouter(t *testing.T) {
 
 func TestDeleteQuestionImageDeletesS3Object(t *testing.T) {
 	f := newFixture()
+	f.questionImages.GetFn = func(ctx context.Context, id string) (*models.CardQuestionImage, error) {
+		return &models.CardQuestionImage{Id: id, StorageKey: "images/" + id + ".png"}, nil
+	}
 	f.questionImages.DeleteFn = func(ctx context.Context, id string) (*models.CardQuestionImage, error) {
-		return &models.CardQuestionImage{Id: id, ImageURL: "https://b.s3.amazonaws.com/question-images/x.png"}, nil
+		return &models.CardQuestionImage{Id: id, StorageKey: "images/" + id + ".png"}, nil
 	}
 
-	rec := f.do("DELETE", "/card-question-image?id=qi1", "")
+	rec := f.do("DELETE", "/card-question-image?id=e3d4a94b-f0e9-46af-a2c0-2c02850b539a", "")
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
 	}
@@ -220,30 +224,12 @@ func TestDeleteQuestionImageDeletesS3Object(t *testing.T) {
 	}
 }
 
-func TestPresignedURL(t *testing.T) {
+func TestLegacyPresignedUploadIsGone(t *testing.T) {
 	f := newFixture()
-	f.images.PresignFn = func(ctx context.Context, prefix, fileName, contentType string) (*storage.PresignResult, error) {
-		if prefix != storage.AnswerImagePrefix {
-			t.Errorf("prefix = %q, want %q", prefix, storage.AnswerImagePrefix)
-		}
-		return &storage.PresignResult{UploadURL: "https://signed", ImageURL: "https://img"}, nil
-	}
-
-	rec := f.do("GET", "/presigned-url?fileName=a.png&contentType=image/png&imageType=answer", "")
-	if rec.Code != http.StatusOK {
-		t.Fatalf("status = %d, body %s", rec.Code, rec.Body)
+	if rec := f.do("GET", "/presigned-url?fileName=a.png&contentType=image/png", ""); rec.Code != http.StatusGone {
+		t.Fatalf("legacy upload still accessible: %d", rec.Code)
 	}
 }
 
-func TestPresignedURLRequiresImageContentType(t *testing.T) {
-	f := newFixture()
-	for _, target := range []string{
-		"/presigned-url?fileName=a.png",                               // missing contentType
-		"/presigned-url?fileName=a.png&contentType=application/x-elf", // not an image
-		"/presigned-url?contentType=image/png",                        // missing fileName
-	} {
-		if rec := f.do("GET", target, ""); rec.Code != http.StatusBadRequest {
-			t.Errorf("%s: status = %d, want 400", target, rec.Code)
-		}
-	}
-}
+// Explicitly bypass the external identity dependency only in router unit tests.
+func allowTestRequests(next http.Handler) http.Handler { return next }

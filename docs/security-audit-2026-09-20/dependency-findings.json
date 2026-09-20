@@ -1,0 +1,873 @@
+{
+  "date": "2026-09-20",
+  "backend_commit": "725eb35a3832fdc36987bd853686709ee932bc03",
+  "frontend_commit": "df024f5b3c33f4f02220b22e42e85a71b28f068f",
+  "npm": {
+    "auditReportVersion": 2,
+    "vulnerabilities": {
+      "@vitest/mocker": {
+        "name": "@vitest/mocker",
+        "severity": "moderate",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1193684,
+            "name": "@vitest/mocker",
+            "dependency": "@vitest/mocker",
+            "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+            "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 5.9,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": ">=2.1.0 <4.1.11"
+          }
+        ],
+        "effects": [
+          "vitest"
+        ],
+        "range": "2.1.0 - 4.1.10",
+        "nodes": [
+          "node_modules/@vitest/mocker"
+        ],
+        "fixAvailable": true
+      },
+      "nanoid": {
+        "name": "nanoid",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1138811,
+            "name": "nanoid",
+            "dependency": "nanoid",
+            "title": "nanoid: non-secure generators can loop indefinitely with negative size",
+            "url": "https://github.com/advisories/GHSA-28wg-ghj8-5hjv",
+            "severity": "high",
+            "cwe": [
+              "CWE-835"
+            ],
+            "cvss": {
+              "score": 5.9,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<3.3.16"
+          },
+          {
+            "source": 1139427,
+            "name": "nanoid",
+            "dependency": "nanoid",
+            "title": "nanoid: custom generators can loop indefinitely when size is zero",
+            "url": "https://github.com/advisories/GHSA-2v37-7h3g-55p8",
+            "severity": "high",
+            "cwe": [
+              "CWE-835"
+            ],
+            "cvss": {
+              "score": 5.9,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:N/I:N/A:H"
+            },
+            "range": "<3.3.18"
+          }
+        ],
+        "effects": [],
+        "range": "<=3.3.17",
+        "nodes": [
+          "node_modules/nanoid"
+        ],
+        "fixAvailable": true
+      },
+      "postcss": {
+        "name": "postcss",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1130709,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS: incomplete fix of GHSA-6g55-p6wh-862q \u2014 attacker-controlled sourceMappingURL reads arbitrary .map files when `from` is unset",
+            "url": "https://github.com/advisories/GHSA-fxqj-rqcc-2cmp",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22",
+              "CWE-200"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": "<=8.5.22"
+          },
+          {
+            "source": 1139510,
+            "name": "postcss",
+            "dependency": "postcss",
+            "title": "PostCSS: Path Traversal in Previous Source Map Auto-Loading (sourceMappingURL) leads to Arbitrary .map File Disclosure",
+            "url": "https://github.com/advisories/GHSA-r28c-9q8g-f849",
+            "severity": "high",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 7.5,
+              "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": "<=8.5.17"
+          }
+        ],
+        "effects": [],
+        "range": "<=8.5.22",
+        "nodes": [
+          "node_modules/postcss"
+        ],
+        "fixAvailable": true
+      },
+      "react-router": {
+        "name": "react-router",
+        "severity": "high",
+        "isDirect": true,
+        "via": [
+          {
+            "source": 1138769,
+            "name": "react-router",
+            "dependency": "react-router",
+            "title": "React Router: RSC Mode CSRF Bypass Allows Action Execution Before 400 Response",
+            "url": "https://github.com/advisories/GHSA-qwww-vcr4-c8h2",
+            "severity": "high",
+            "cwe": [
+              "CWE-352"
+            ],
+            "cvss": {
+              "score": 0,
+              "vectorString": null
+            },
+            "range": ">=7.12.0 <7.18.2"
+          }
+        ],
+        "effects": [],
+        "range": "7.12.0 - 7.18.1",
+        "nodes": [
+          "node_modules/react-router"
+        ],
+        "fixAvailable": true
+      },
+      "undici": {
+        "name": "undici",
+        "severity": "high",
+        "isDirect": false,
+        "via": [
+          {
+            "source": 1130715,
+            "name": "undici",
+            "dependency": "undici",
+            "title": "undici vulnerable to downstream response desynchronization via retry interceptor",
+            "url": "https://github.com/advisories/GHSA-8xcm-r25x-g524",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-444"
+            ],
+            "cvss": {
+              "score": 4.8,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=7.0.0 <7.29.0"
+          },
+          {
+            "source": 1130718,
+            "name": "undici",
+            "dependency": "undici",
+            "title": "undici vulnerable to cross-user information disclosure and parse-time crash via degenerate private cache directives",
+            "url": "https://github.com/advisories/GHSA-4cwx-7wf7-3272",
+            "severity": "high",
+            "cwe": [
+              "CWE-200",
+              "CWE-248",
+              "CWE-525"
+            ],
+            "cvss": {
+              "score": 7.4,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:H"
+            },
+            "range": ">=7.0.0 <7.29.0"
+          },
+          {
+            "source": 1130726,
+            "name": "undici",
+            "dependency": "undici",
+            "title": "undici vulnerable to CRLF Injection via blob-like body 'type' property",
+            "url": "https://github.com/advisories/GHSA-m8rv-5g2x-5cg5",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-93"
+            ],
+            "cvss": {
+              "score": 4.2,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:R/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=7.0.0 <7.29.0"
+          },
+          {
+            "source": 1130729,
+            "name": "undici",
+            "dependency": "undici",
+            "title": "undici vulnerable to cross-user information disclosure via whitespace around equals in Cache-Control directives",
+            "url": "https://github.com/advisories/GHSA-jr45-8vmc-qm54",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-436",
+              "CWE-524"
+            ],
+            "cvss": {
+              "score": 5.9,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": ">=7.0.0 <7.29.0"
+          },
+          {
+            "source": 1130731,
+            "name": "undici",
+            "dependency": "undici",
+            "title": "undici vulnerable to cookie attribute injection via unsanitized domain and unparsed setCookie fields",
+            "url": "https://github.com/advisories/GHSA-v3r7-h72x-cjcm",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-74"
+            ],
+            "cvss": {
+              "score": 4.8,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:L/I:L/A:N"
+            },
+            "range": ">=7.0.0 <7.29.0"
+          }
+        ],
+        "effects": [],
+        "range": "7.0.0 - 7.28.0",
+        "nodes": [
+          "node_modules/undici"
+        ],
+        "fixAvailable": true
+      },
+      "vitest": {
+        "name": "vitest",
+        "severity": "moderate",
+        "isDirect": true,
+        "via": [
+          "@vitest/mocker",
+          {
+            "source": 1193683,
+            "name": "vitest",
+            "dependency": "vitest",
+            "title": "Vitest: Path Traversal / Arbitrary File Read via @vitest/mocker Redirect Mock",
+            "url": "https://github.com/advisories/GHSA-82fw-gwwq-j7x9",
+            "severity": "moderate",
+            "cwe": [
+              "CWE-22"
+            ],
+            "cvss": {
+              "score": 5.9,
+              "vectorString": "CVSS:3.1/AV:N/AC:H/PR:N/UI:N/S:U/C:H/I:N/A:N"
+            },
+            "range": ">=2.1.0 <4.1.11"
+          }
+        ],
+        "effects": [],
+        "range": "2.1.0-beta.1 - 4.1.10",
+        "nodes": [
+          "node_modules/vitest"
+        ],
+        "fixAvailable": true
+      }
+    },
+    "metadata": {
+      "vulnerabilities": {
+        "info": 0,
+        "low": 0,
+        "moderate": 2,
+        "high": 4,
+        "critical": 0,
+        "total": 6
+      },
+      "dependencies": {
+        "prod": 9,
+        "dev": 214,
+        "optional": 45,
+        "peer": 10,
+        "peerOptional": 0,
+        "total": 222
+      }
+    }
+  },
+  "go_scans": [
+    {
+      "scope": "./... (host darwin/arm64)",
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.8.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-09-16T18:00:43Z",
+        "go_version": "go1.26.2",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "symbol_matches": [
+        {
+          "id": "GO-2026-4918",
+          "summary": "Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net",
+          "fixed_version": "v1.26.3",
+          "symbols": [
+            "net/http.CloseIdleConnections",
+            "net/http.Do",
+            "net/http.RoundTrip"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/761581"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/761640"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/78476"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/qcCIEXso47M"
+            }
+          ],
+          "details": "When processing HTTP/2 SETTINGS frames, transport will enter an infinite loop of writing CONTINUATION frames if it receives a SETTINGS_MAX_FRAME_SIZE with a value of 0."
+        },
+        {
+          "id": "GO-2026-4971",
+          "summary": "Panic in Dial and LookupPort when handling NUL byte on Windows in net",
+          "fixed_version": "v1.26.3",
+          "symbols": [
+            "net.DialContext",
+            "net.Listen",
+            "net.LookupHost",
+            "net.ResolveIPAddr",
+            "net.ResolveTCPAddr",
+            "net.ResolveUDPAddr"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79006"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/qcCIEXso47M"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/775320"
+            }
+          ],
+          "details": "The Dial and LookupPort functions panic on Windows when provided with an input containing a NUL (0)."
+        },
+        {
+          "id": "GO-2026-5026",
+          "summary": "Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "net/http.CloseIdleConnections",
+            "net/http.Do",
+            "net/http.RoundTrip"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/767220"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/78760"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/iI-mYSI0lu8"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "The ToASCII and ToUnicode functions incorrectly accept Punycode-encoded labels that decode to an ASCII-only label. For example, ToUnicode(\"xn--example-.com\") incorrectly returns the name \"example.com\" rather than an error.\n\nThis behavior can lead to privilege escalation in programs using the idna package. For example, a program which performs privilege checks on the ASCII hostname may reject \"example.com\" but permit \"xn--example-.com\". If that program subsequently converts the ASCII hostname to Unicode, it will inadvertently permits access to the Unicode name \"example.com\"."
+        },
+        {
+          "id": "GO-2026-5037",
+          "summary": "Inefficient candidate hostname parsing in crypto/x509",
+          "fixed_version": "v1.26.4",
+          "symbols": [
+            "crypto/x509.Error",
+            "crypto/x509.Verify",
+            "crypto/x509.VerifyHostname"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/783621"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79694"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/tKs3rmcBcKw"
+            }
+          ],
+          "details": "(*x509.Certificate).VerifyHostname previously called matchHostnames in a loop over all DNS Subject Alternative Name (SAN) entries. This caused strings.Split(host, \".\") to execute repeatedly on the same input hostname.\n\nWith a large DNS SAN list, verification costs scaled quadratically based on the number of SAN entries multiplied by the hostname's label count. Because x509.Verify validates hostnames before building the certificate chain, this overhead occurred even for untrusted certificates."
+        },
+        {
+          "id": "GO-2026-5039",
+          "summary": "Arbitrary inputs are included in errors without any escaping in net/textproto",
+          "fixed_version": "v1.26.4",
+          "symbols": [
+            "net/textproto.ReadMIMEHeader"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79346"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/777060"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/tKs3rmcBcKw"
+            }
+          ],
+          "details": "When returning errors, functions in the net/textproto package would include its input as part of the error. This might allow an attacker to inject misleading content to errors that are printed or logged."
+        },
+        {
+          "id": "GO-2026-5856",
+          "summary": "Invoking Encrypted Client Hello privacy leak in crypto/tls",
+          "fixed_version": "v1.26.5",
+          "symbols": [
+            "crypto/tls.DialContext",
+            "crypto/tls.HandshakeContext",
+            "crypto/tls.Read",
+            "crypto/tls.Write"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/775960"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79282"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/OrmQE_Yp5Sc"
+            }
+          ],
+          "details": "Handshakes which used Encrypted Client Hello could be de-anonymized by a passive network observer due to a disclosure of pre-shared key identities in the unencrypted client hello."
+        },
+        {
+          "id": "GO-2026-5972",
+          "summary": "Enforce maximum recursion depth in encoding/asn1",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "encoding/asn1.Unmarshal"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80405"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/814980"
+            }
+          ],
+          "details": "Enforce a recursion limit in Unmarshal to prevent stack exhaustion when parsing deeply-nested, recursive structures."
+        },
+        {
+          "id": "GO-2026-6088",
+          "summary": "Add recursion depth guard during decode in encoding/xml",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "encoding/xml.Decode",
+            "encoding/xml.Skip",
+            "encoding/xml.Token"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80481"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/803320"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Previously, DecodeElement would reset the depth counter causing it to never fire; this could lead to stack exhaustion."
+        },
+        {
+          "id": "GO-2026-6089",
+          "summary": "Apply ReadHeaderTimeout when doing unencrypted HTTP/2 check in net/http",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "net/http.ListenAndServe"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80205"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/795540"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "When a server is configured to support unencrypted HTTP/2, it reads a few bytes from each new connection to see if they contain the HTTP/2 client preface. ReadHeaderTimeout is unexpectedly not being applied when doing this."
+        },
+        {
+          "id": "GO-2026-6090",
+          "summary": "Limit handshake messages we are willing to accept post-handshake in crypto/tls",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "crypto/tls.DialContext",
+            "crypto/tls.HandshakeContext",
+            "crypto/tls.Read",
+            "crypto/tls.Write"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80528"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/804261"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Handshake messages, such as KeyUpdate, are always considered as state-advancing, regardless of whether a handshake has been completed or not. As a result, a malicious client can keep sending KeyUpdate messages to force the server to keep performing key derivation operations indefinitely."
+        },
+        {
+          "id": "GO-2026-6218",
+          "summary": "Avoid quadratic complexity in resolvePath in net/url",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "net/url.Parse"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/803681"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80494"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Previously, resolving relative paths containing parent directory ('..') segments performed string conversions and buffer rewrites on each step, resulting in quadratic time complexity and high memory allocation overhead.\n\nNow, path resolution operates on a byte buffer using index-based backtracking for '..' segments, eliminating the quadratic time complexity and significantly reducing memory allocations."
+        }
+      ],
+      "interpretation": "Scanner matches, not proof of exploitability. See report for platform/configuration/input constraints."
+    },
+    {
+      "scope": "./cmd/lambda (GOOS=linux GOARCH=arm64)",
+      "config": {
+        "protocol_version": "v1.0.0",
+        "scanner_name": "govulncheck",
+        "scanner_version": "v1.8.0",
+        "db": "https://vuln.go.dev",
+        "db_last_modified": "2026-09-16T18:00:43Z",
+        "go_version": "go1.26.2",
+        "scan_level": "symbol",
+        "scan_mode": "source"
+      },
+      "symbol_matches": [
+        {
+          "id": "GO-2026-4918",
+          "summary": "Infinite loop in HTTP/2 transport when given bad SETTINGS_MAX_FRAME_SIZE in net/http/internal/http2 in golang.org/x/net",
+          "fixed_version": "v1.26.3",
+          "symbols": [
+            "net/http.CloseIdleConnections",
+            "net/http.Do",
+            "net/http.RoundTrip"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/761581"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/761640"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/78476"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/qcCIEXso47M"
+            }
+          ],
+          "details": "When processing HTTP/2 SETTINGS frames, transport will enter an infinite loop of writing CONTINUATION frames if it receives a SETTINGS_MAX_FRAME_SIZE with a value of 0."
+        },
+        {
+          "id": "GO-2026-4971",
+          "summary": "Panic in Dial and LookupPort when handling NUL byte on Windows in net",
+          "fixed_version": "v1.26.3",
+          "symbols": [
+            "net.DialContext",
+            "net.Listen",
+            "net.LookupHost"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79006"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/qcCIEXso47M"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/775320"
+            }
+          ],
+          "details": "The Dial and LookupPort functions panic on Windows when provided with an input containing a NUL (0)."
+        },
+        {
+          "id": "GO-2026-5026",
+          "summary": "Invoking failure to reject ASCII-only Punycode-encoded labels in golang.org/x/net/idna",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "net/http.CloseIdleConnections",
+            "net/http.Do",
+            "net/http.RoundTrip"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/767220"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/78760"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/iI-mYSI0lu8"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "The ToASCII and ToUnicode functions incorrectly accept Punycode-encoded labels that decode to an ASCII-only label. For example, ToUnicode(\"xn--example-.com\") incorrectly returns the name \"example.com\" rather than an error.\n\nThis behavior can lead to privilege escalation in programs using the idna package. For example, a program which performs privilege checks on the ASCII hostname may reject \"example.com\" but permit \"xn--example-.com\". If that program subsequently converts the ASCII hostname to Unicode, it will inadvertently permits access to the Unicode name \"example.com\"."
+        },
+        {
+          "id": "GO-2026-5037",
+          "summary": "Inefficient candidate hostname parsing in crypto/x509",
+          "fixed_version": "v1.26.4",
+          "symbols": [
+            "crypto/x509.Error",
+            "crypto/x509.Verify",
+            "crypto/x509.VerifyHostname"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/783621"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79694"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/tKs3rmcBcKw"
+            }
+          ],
+          "details": "(*x509.Certificate).VerifyHostname previously called matchHostnames in a loop over all DNS Subject Alternative Name (SAN) entries. This caused strings.Split(host, \".\") to execute repeatedly on the same input hostname.\n\nWith a large DNS SAN list, verification costs scaled quadratically based on the number of SAN entries multiplied by the hostname's label count. Because x509.Verify validates hostnames before building the certificate chain, this overhead occurred even for untrusted certificates."
+        },
+        {
+          "id": "GO-2026-5039",
+          "summary": "Arbitrary inputs are included in errors without any escaping in net/textproto",
+          "fixed_version": "v1.26.4",
+          "symbols": [
+            "net/textproto.ReadMIMEHeader"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79346"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/777060"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/tKs3rmcBcKw"
+            }
+          ],
+          "details": "When returning errors, functions in the net/textproto package would include its input as part of the error. This might allow an attacker to inject misleading content to errors that are printed or logged."
+        },
+        {
+          "id": "GO-2026-5856",
+          "summary": "Invoking Encrypted Client Hello privacy leak in crypto/tls",
+          "fixed_version": "v1.26.5",
+          "symbols": [
+            "crypto/tls.DialContext",
+            "crypto/tls.HandshakeContext",
+            "crypto/tls.Read",
+            "crypto/tls.Write"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/775960"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/79282"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/OrmQE_Yp5Sc"
+            }
+          ],
+          "details": "Handshakes which used Encrypted Client Hello could be de-anonymized by a passive network observer due to a disclosure of pre-shared key identities in the unencrypted client hello."
+        },
+        {
+          "id": "GO-2026-5972",
+          "summary": "Enforce maximum recursion depth in encoding/asn1",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "encoding/asn1.Unmarshal"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80405"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/814980"
+            }
+          ],
+          "details": "Enforce a recursion limit in Unmarshal to prevent stack exhaustion when parsing deeply-nested, recursive structures."
+        },
+        {
+          "id": "GO-2026-6088",
+          "summary": "Add recursion depth guard during decode in encoding/xml",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "encoding/xml.Decode",
+            "encoding/xml.Skip",
+            "encoding/xml.Token"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80481"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/803320"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Previously, DecodeElement would reset the depth counter causing it to never fire; this could lead to stack exhaustion."
+        },
+        {
+          "id": "GO-2026-6090",
+          "summary": "Limit handshake messages we are willing to accept post-handshake in crypto/tls",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "crypto/tls.DialContext",
+            "crypto/tls.HandshakeContext",
+            "crypto/tls.Read",
+            "crypto/tls.Write"
+          ],
+          "references": [
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80528"
+            },
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/804261"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Handshake messages, such as KeyUpdate, are always considered as state-advancing, regardless of whether a handshake has been completed or not. As a result, a malicious client can keep sending KeyUpdate messages to force the server to keep performing key derivation operations indefinitely."
+        },
+        {
+          "id": "GO-2026-6218",
+          "summary": "Avoid quadratic complexity in resolvePath in net/url",
+          "fixed_version": "v1.26.6",
+          "symbols": [
+            "net/url.Parse"
+          ],
+          "references": [
+            {
+              "type": "FIX",
+              "url": "https://go.dev/cl/803681"
+            },
+            {
+              "type": "REPORT",
+              "url": "https://go.dev/issue/80494"
+            },
+            {
+              "type": "WEB",
+              "url": "https://groups.google.com/g/golang-announce/c/94pEornpRlI"
+            }
+          ],
+          "details": "Previously, resolving relative paths containing parent directory ('..') segments performed string conversions and buffer rewrites on each step, resulting in quadratic time complexity and high memory allocation overhead.\n\nNow, path resolution operates on a byte buffer using index-based backtracking for '..' segments, eliminating the quadratic time complexity and significantly reducing memory allocations."
+        }
+      ],
+      "interpretation": "Scanner matches, not proof of exploitability. See report for platform/configuration/input constraints."
+    }
+  ]
+}

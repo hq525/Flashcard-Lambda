@@ -165,18 +165,17 @@ func NewCardQuestionImageRepository(s *Store) Repository[models.CardQuestionImag
 		FilterByEntityType: true,
 		New: func(req models.CreateCardQuestionImageRequest) models.CardQuestionImage {
 			return models.CardQuestionImage{
-				Id:              uuid.NewString(),
+				Id:              req.Id,
 				EntityType:      models.EntityTypeCardQuestionImage,
 				CardId:          req.CardId,
 				SequenceNumber:  req.SequenceNumber,
-				ImageURL:        req.ImageURL,
+				StorageKey:      req.StorageKey,
 				CreatedDateTime: now(),
 			}
 		},
 		UpdateAttrs: func(req models.UpdateCardQuestionImageRequest) map[string]any {
 			return map[string]any{
 				"sequence_number": req.SequenceNumber,
-				"image_url":       req.ImageURL,
 			}
 		},
 	})
@@ -189,18 +188,17 @@ func NewCardAnswerSectionImageRepository(s *Store) Repository[models.CardAnswerS
 		ListKey:    "card_answer_section_id",
 		New: func(req models.CreateCardAnswerSectionImageRequest) models.CardAnswerSectionImage {
 			return models.CardAnswerSectionImage{
-				Id:                  uuid.NewString(),
+				Id:                  req.Id,
 				EntityType:          models.EntityTypeCardAnswerSectionImage,
 				CardAnswerSectionId: req.CardAnswerSectionId,
 				SequenceNumber:      req.SequenceNumber,
-				ImageURL:            req.ImageURL,
+				StorageKey:          req.StorageKey,
 				CreatedDateTime:     now(),
 			}
 		},
 		UpdateAttrs: func(req models.UpdateCardAnswerSectionImageRequest) map[string]any {
 			return map[string]any{
 				"sequence_number": req.SequenceNumber,
-				"image_url":       req.ImageURL,
 			}
 		},
 	})

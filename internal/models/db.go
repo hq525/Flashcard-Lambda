@@ -58,7 +58,8 @@ type CardQuestionImage struct {
 	CardId          string `json:"cardID" dynamodbav:"card_id"`
 	SequenceNumber  uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
 	CreatedDateTime string `json:"createdDateTime" dynamodbav:"created_date_time"`
-	ImageURL        string `json:"imageURL" dynamodbav:"image_url"`
+	ImageURL        string `json:"imageURL" dynamodbav:"image_url,omitempty"`
+	StorageKey      string `json:"-" dynamodbav:"storage_key,omitempty"`
 }
 
 type CardAnswerSection struct {
@@ -78,5 +79,6 @@ type CardAnswerSectionImage struct {
 	CardAnswerSectionId string `json:"cardAnswerSectionID" dynamodbav:"card_answer_section_id"`
 	SequenceNumber      uint16 `json:"sequenceNumber" dynamodbav:"sequence_number"`
 	CreatedDateTime     string `json:"createdDateTime" dynamodbav:"created_date_time"`
-	ImageURL            string `json:"imageURL" dynamodbav:"image_url"`
+	ImageURL            string `json:"imageURL" dynamodbav:"image_url,omitempty"`
+	StorageKey          string `json:"-" dynamodbav:"storage_key,omitempty"`
 }

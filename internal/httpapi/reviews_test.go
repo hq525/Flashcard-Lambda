@@ -38,9 +38,11 @@ func (s *reviewAPIStub) History(_ context.Context, id string) ([]models.CardRevi
 	return nil, s.err
 }
 func reviewAPIRequest(stub *reviewAPIStub, method, path, body string) *httptest.ResponseRecorder {
-	router := NewRouter(Deps{Reviews: stub, Cascade: &service.Cascade{}})
+	router := NewRouter(Deps{Reviews: stub, Cascade: &service.Cascade{}, Authenticate: allowTestRequests, AllowedOrigin: "http://localhost:5173"})
 	rec := httptest.NewRecorder()
-	router.ServeHTTP(rec, httptest.NewRequest(method, path, strings.NewReader(body)))
+	req := httptest.NewRequest(method, path, strings.NewReader(body))
+	req.Header.Set("Origin", "http://localhost:5173")
+	router.ServeHTTP(rec, req)
 	return rec
 }
 
@@ -113,7 +115,7 @@ func TestReviewAPIMapsErrorsAndKeepsCORS(t *testing.T) {
 		{errors.New("database failed"), 500},
 	} {
 		result := reviewAPIRequest(&reviewAPIStub{err: tc.err}, "POST", "/card-review?cardId=card-1", `{"reviewId":"r","rating":"good","expectedRevision":0}`)
-		if result.Code != tc.status || result.Header().Get("Access-Control-Allow-Origin") != "*" {
+		if result.Code != tc.status || result.Header().Get("Access-Control-Allow-Origin") != "http://localhost:5173" {
 			t.Errorf("%v: %d %s", tc.err, result.Code, result.Body)
 		}
 	}

@@ -1,6 +1,7 @@
 # Build artifacts from `sam build`
 .aws-sam/
-.env
+.env*
+!.env.example
 
 # Personal Claude Code settings
 .claude/settings.local.json

@@ -160,21 +160,9 @@ func (s *dynamoReviewStore) ListReviews(ctx context.Context, cardID string) ([]m
 			":type": &dynamodbTypes.AttributeValueMemberS{Value: models.EntityTypeCardReview},
 		},
 	}
-	reviews := make([]models.CardReview, 0)
-	for {
-		result, err := s.store.DB.Query(ctx, input)
-		if err != nil {
-			return nil, err
-		}
-		var page []models.CardReview
-		if err := attributevalue.UnmarshalListOfMaps(result.Items, &page); err != nil {
-			return nil, err
-		}
-		reviews = append(reviews, page...)
-		if len(result.LastEvaluatedKey) == 0 {
-			break
-		}
-		input.ExclusiveStartKey = result.LastEvaluatedKey
+	reviews, err := queryBounded[models.CardReview](ctx, s.store, input)
+	if err != nil {
+		return nil, err
 	}
 	// RFC3339Nano strings do not sort chronologically when fractional seconds
 	// have different lengths, so compare parsed instants.

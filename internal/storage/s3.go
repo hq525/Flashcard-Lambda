@@ -1,19 +1,22 @@
 package storage
 
 import (
+	"bytes"
 	"context"
-	"fmt"
-	"net/url"
-	"path/filepath"
-	"strings"
+	"errors"
+	"path"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
-	"github.com/google/uuid"
+	"github.com/aws/aws-sdk-go-v2/service/s3/types"
 )
 
-const presignExpiry = 15 * time.Minute
+const readURLExpiry = 5 * time.Minute
+
+// Allow brief browser reuse, never shared-cache storage. Signed URLs still
+// expire after five minutes; API responses containing those URLs use no-store.
+const imageCacheControl = "private, max-age=60, must-revalidate"
 
 type S3ImageStore struct {
 	client  *s3.Client
@@ -22,70 +25,45 @@ type S3ImageStore struct {
 }
 
 func NewS3ImageStore(client *s3.Client, bucket string) *S3ImageStore {
-	return &S3ImageStore{
-		client:  client,
-		presign: s3.NewPresignClient(client),
-		bucket:  bucket,
-	}
+	return &S3ImageStore{client: client, presign: s3.NewPresignClient(client), bucket: bucket}
 }
 
-func objectKey(prefix, fileName string) string {
-	return prefix + "/" + uuid.NewString() + filepath.Ext(fileName)
-}
-
-func (s *S3ImageStore) PresignUpload(ctx context.Context, prefix, fileName, contentType string) (*PresignResult, error) {
-	key := objectKey(prefix, fileName)
-
-	presignedReq, err := s.presign.PresignPutObject(ctx, &s3.PutObjectInput{
-		Bucket:      aws.String(s.bucket),
-		Key:         aws.String(key),
-		ContentType: aws.String(contentType),
-	}, s3.WithPresignExpires(presignExpiry))
-	if err != nil {
-		return nil, err
-	}
-
-	return &PresignResult{
-		UploadURL: presignedReq.URL,
-		ImageURL:  "https://" + s.bucket + ".s3.amazonaws.com/" + key,
-	}, nil
-}
-
-func (s *S3ImageStore) Delete(ctx context.Context, imageURL string) error {
-	bucket, key, err := parseS3URL(imageURL)
-	if err != nil {
+func (s *S3ImageStore) Put(ctx context.Context, key string, data []byte, contentType string) error {
+	if err := validateManagedKey(key); err != nil {
 		return err
 	}
-
-	_, err = s.client.DeleteObject(ctx, &s3.DeleteObjectInput{
-		Bucket: aws.String(bucket),
-		Key:    aws.String(key),
-	})
+	if len(data) == 0 || len(data) > MaxStoredImageBytes {
+		return ErrImageTooLarge
+	}
+	if (path.Ext(key) == ".jpg" && contentType != "image/jpeg") || (path.Ext(key) == ".png" && contentType != "image/png") {
+		return ErrInvalidImage
+	}
+	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader(data), ContentType: aws.String(contentType), CacheControl: aws.String(imageCacheControl), ContentDisposition: aws.String("inline"), ServerSideEncryption: types.ServerSideEncryptionAes256, IfNoneMatch: aws.String("*")})
 	return err
 }
 
-// parseS3URL extracts bucket and key from a virtual-hosted-style S3 URL
-// (https://<bucket>.s3.amazonaws.com/<key> or
-// https://<bucket>.s3.<region>.amazonaws.com/<key>). The bucket comes from
-// the URL rather than config so records created under the old two-bucket
-// layout can still be deleted.
-func parseS3URL(imageURL string) (bucket, key string, err error) {
-	parsed, err := url.Parse(imageURL)
+func (s *S3ImageStore) ReadURL(ctx context.Context, key string) (string, error) {
+	if err := validateManagedKey(key); err != nil {
+		return "", err
+	}
+	contentType := "image/png"
+	if path.Ext(key) == ".jpg" {
+		contentType = "image/jpeg"
+	}
+	result, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), ResponseContentType: aws.String(contentType), ResponseContentDisposition: aws.String("inline"), ResponseCacheControl: aws.String(imageCacheControl)}, s3.WithPresignExpires(readURLExpiry))
 	if err != nil {
-		return "", "", err
+		return "", err
 	}
+	return result.URL, nil
+}
 
-	host := parsed.Hostname()
-	idx := strings.Index(host, ".s3")
-	if idx < 1 || !strings.HasSuffix(host, ".amazonaws.com") {
-		return "", "", fmt.Errorf("not a virtual-hosted S3 URL: %s", imageURL)
+func (s *S3ImageStore) Delete(ctx context.Context, key string) error {
+	if err := validateManagedKey(key); err != nil {
+		return err
 	}
-	bucket = host[:idx]
-
-	key = strings.TrimPrefix(parsed.Path, "/")
-	if key == "" {
-		return "", "", fmt.Errorf("S3 URL has no object key: %s", imageURL)
+	if s.bucket == "" {
+		return errors.New("image bucket is not configured")
 	}
-
-	return bucket, key, nil
+	_, err := s.client.DeleteObject(ctx, &s3.DeleteObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key)})
+	return err
 }

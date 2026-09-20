@@ -1,0 +1,49 @@
+package httpapi
+
+import (
+ "context"
+ "encoding/json"
+ "net/http"
+ "net/http/httptest"
+ "strings"
+ "testing"
+ "flashcard_lambda/internal/models"
+ "flashcard_lambda/internal/storage"
+)
+
+func TestSecurityAuditUnauthenticatedCrossOriginRead(t *testing.T) {
+ f := newFixture()
+ f.categories.ListFn = func(context.Context, string) ([]models.Category, error) { return []models.Category{{Id:"private-category",Name:"Private notes"}},nil }
+ req := httptest.NewRequest(http.MethodGet,"/categories",nil)
+ req.Header.Set("Origin","https://untrusted.example")
+ rec := httptest.NewRecorder()
+ f.router.ServeHTTP(rec,req)
+ if rec.Code != 200 || rec.Header().Get("Access-Control-Allow-Origin") != "*" { t.Fatalf("unexpected response %d %v",rec.Code,rec.Header()) }
+ t.Log("CONFIRMED: application handler returns private categories to a request with no credentials and an arbitrary Origin; API Gateway is outside this local probe")
+}
+
+func TestSecurityAuditForgedImageDeletion(t *testing.T) {
+ f := newFixture()
+ target := "https://flash-card-app-answer-images.s3.amazonaws.com/unrelated/private-object.png"
+ var stored models.CardQuestionImage
+ f.questionImages.CreateFn = func(_ context.Context, req models.CreateCardQuestionImageRequest) (*models.CardQuestionImage,error) {
+  stored = models.CardQuestionImage{Id:"attacker-record",CardId:req.CardId,ImageURL:req.ImageURL,SequenceNumber:req.SequenceNumber}
+  return &stored,nil
+ }
+ f.questionImages.DeleteFn = func(_ context.Context,id string) (*models.CardQuestionImage,error) { return &stored,nil }
+ body,_ := json.Marshal(models.CreateCardQuestionImageRequest{CardId:"nonexistent-parent",SequenceNumber:1,ImageURL:target})
+ created := f.do("POST","/card-question-image",string(body))
+ deleted := f.do("DELETE","/card-question-image?id=attacker-record","")
+ if created.Code != 201 || deleted.Code != 200 || len(f.images.DeletedURL)!=1 || f.images.DeletedURL[0]!=target { t.Fatalf("create %d delete %d targets %v",created.Code,deleted.Code,f.images.DeletedURL) }
+ t.Log("CONFIRMED: client-supplied image URL passes request validation and reaches object deletion without an upload record or parent lookup")
+}
+
+func TestSecurityAuditUnboundedPresign(t *testing.T) {
+ f := newFixture()
+ f.images.PresignFn = func(_ context.Context,prefix,name,mime string) (*storage.PresignResult,error) { return &storage.PresignResult{UploadURL:"https://upload.invalid",ImageURL:"https://image.invalid"},nil }
+ for _,mime := range []string{"image/png","image/svg+xml","image/not-a-real-format"} {
+  rec := f.do("GET","/presigned-url?fileName=payload.svg&contentType="+strings.ReplaceAll(mime,"+","%2B"),"")
+  if rec.Code!=200 { t.Fatalf("MIME %s rejected: %d",mime,rec.Code) }
+ }
+ t.Log("CONFIRMED: presign accepts SVG and invented image MIME types, with no file-size or parent identifier required")
+}

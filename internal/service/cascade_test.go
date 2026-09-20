@@ -14,9 +14,9 @@ import (
 //	category cat-1
 //	└── deck deck-1
 //	    └── card card-1
-//	        ├── question image qi-1 (with S3 object)
+//	        ├── question image e3d4a94b-f0e9-46af-a2c0-2c02850b539a (with S3 object)
 //	        └── section sec-1
-//	            └── section image si-1 (with S3 object)
+//	            └── section image 63315953-b5c4-4a0c-9459-787f61368daa (with S3 object)
 func buildFixture() (*Cascade, *testutil.FakeImageStore, map[string]*[]string) {
 	images := &testutil.FakeImageStore{}
 
@@ -61,26 +61,35 @@ func buildFixture() (*Cascade, *testutil.FakeImageStore, map[string]*[]string) {
 	questionImages := &testutil.FakeRepo[models.CardQuestionImage, models.CreateCardQuestionImageRequest, models.UpdateCardQuestionImageRequest]{
 		ListFn: func(ctx context.Context, parentID string) ([]models.CardQuestionImage, error) {
 			if parentID == "card-1" {
-				return []models.CardQuestionImage{{Id: "qi-1", CardId: "card-1", ImageURL: "https://b.s3.amazonaws.com/question-images/qi-1.png"}}, nil
+				return []models.CardQuestionImage{{Id: "e3d4a94b-f0e9-46af-a2c0-2c02850b539a", CardId: "card-1", StorageKey: "images/e3d4a94b-f0e9-46af-a2c0-2c02850b539a.png"}}, nil
 			}
 			return nil, nil
 		},
 		DeleteFn: func(ctx context.Context, id string) (*models.CardQuestionImage, error) {
-			return &models.CardQuestionImage{Id: id, ImageURL: "https://b.s3.amazonaws.com/question-images/qi-1.png"}, nil
+			return &models.CardQuestionImage{Id: id, StorageKey: "images/e3d4a94b-f0e9-46af-a2c0-2c02850b539a.png"}, nil
 		},
 	}
 	sectionImages := &testutil.FakeRepo[models.CardAnswerSectionImage, models.CreateCardAnswerSectionImageRequest, models.UpdateCardAnswerSectionImageRequest]{
 		ListFn: func(ctx context.Context, parentID string) ([]models.CardAnswerSectionImage, error) {
 			if parentID == "sec-1" {
-				return []models.CardAnswerSectionImage{{Id: "si-1", CardAnswerSectionId: "sec-1", ImageURL: "https://b.s3.amazonaws.com/answer-images/si-1.png"}}, nil
+				return []models.CardAnswerSectionImage{{Id: "63315953-b5c4-4a0c-9459-787f61368daa", CardAnswerSectionId: "sec-1", StorageKey: "images/63315953-b5c4-4a0c-9459-787f61368daa.png"}}, nil
 			}
 			return nil, nil
 		},
 		DeleteFn: func(ctx context.Context, id string) (*models.CardAnswerSectionImage, error) {
-			return &models.CardAnswerSectionImage{Id: id, ImageURL: "https://b.s3.amazonaws.com/answer-images/si-1.png"}, nil
+			return &models.CardAnswerSectionImage{Id: id, StorageKey: "images/63315953-b5c4-4a0c-9459-787f61368daa.png"}, nil
 		},
 	}
 
+	questionImages.GetFn = func(ctx context.Context, id string) (*models.CardQuestionImage, error) {
+		if id == "missing" {
+			return nil, nil
+		}
+		return &models.CardQuestionImage{Id: id, StorageKey: "images/" + id + ".png"}, nil
+	}
+	sectionImages.GetFn = func(ctx context.Context, id string) (*models.CardAnswerSectionImage, error) {
+		return &models.CardAnswerSectionImage{Id: id, StorageKey: "images/" + id + ".png"}, nil
+	}
 	cascade := &Cascade{
 		Categories:     categories,
 		Decks:          decks,
@@ -117,8 +126,8 @@ func TestDeleteCategoryCascades(t *testing.T) {
 		"decks":          {"deck-1"},
 		"cards":          {"card-1"},
 		"sections":       {"sec-1"},
-		"questionImages": {"qi-1"},
-		"sectionImages":  {"si-1"},
+		"questionImages": {"e3d4a94b-f0e9-46af-a2c0-2c02850b539a"},
+		"sectionImages":  {"63315953-b5c4-4a0c-9459-787f61368daa"},
 	}
 	for name, ids := range want {
 		got := *deleted[name]
@@ -152,7 +161,7 @@ func TestDeleteQuestionImageToleratesS3Failure(t *testing.T) {
 	cascade, images, _ := buildFixture()
 	images.DeleteErr = errors.New("s3 unavailable")
 
-	image, err := cascade.DeleteQuestionImage(context.Background(), "qi-1")
+	image, err := cascade.DeleteQuestionImage(context.Background(), "e3d4a94b-f0e9-46af-a2c0-2c02850b539a")
 	if err != nil {
 		t.Fatalf("S3 failure should not fail the request, got %v", err)
 	}

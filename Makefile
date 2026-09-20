@@ -2,6 +2,6 @@
 build-FlashcardFunction:
 	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o $(ARTIFACTS_DIR)/bootstrap ./cmd/lambda
 
-# Local dev server, loading DYNAMODB_TABLE/S3_BUCKET from .env (see .env.example).
+# Authenticated loopback dev server, loading resource/auth settings from .env.
 run:
-	set -a && . ./.env && set +a && go run ./cmd/server -addr :8080
+	set -a && . ./.env && set +a && go run ./cmd/server -addr 127.0.0.1:8080

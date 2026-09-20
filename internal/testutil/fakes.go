@@ -4,8 +4,6 @@ package testutil
 
 import (
 	"context"
-
-	"flashcard_lambda/internal/storage"
 )
 
 // FakeRepo implements persistence.Repository[T, C, U]. Tests set only the
@@ -42,18 +40,27 @@ func (f *FakeRepo[T, C, U]) Delete(ctx context.Context, id string) (*T, error) {
 	return f.DeleteFn(ctx, id)
 }
 
-// FakeImageStore implements storage.ImageStore and records deleted URLs.
+// FakeImageStore captures server-controlled object operations without AWS I/O.
 type FakeImageStore struct {
-	PresignFn  func(ctx context.Context, prefix, fileName, contentType string) (*storage.PresignResult, error)
+	PutFn      func(context.Context, string, []byte, string) error
+	ReadURLFn  func(context.Context, string) (string, error)
 	DeleteErr  error
-	DeletedURL []string
+	DeletedURL []string // Stored managed keys (legacy name retained for test callers).
 }
 
-func (f *FakeImageStore) PresignUpload(ctx context.Context, prefix, fileName, contentType string) (*storage.PresignResult, error) {
-	return f.PresignFn(ctx, prefix, fileName, contentType)
+func (f *FakeImageStore) Put(ctx context.Context, key string, data []byte, contentType string) error {
+	if f.PutFn != nil {
+		return f.PutFn(ctx, key, data, contentType)
+	}
+	return nil
 }
-
-func (f *FakeImageStore) Delete(ctx context.Context, imageURL string) error {
-	f.DeletedURL = append(f.DeletedURL, imageURL)
+func (f *FakeImageStore) ReadURL(ctx context.Context, key string) (string, error) {
+	if f.ReadURLFn != nil {
+		return f.ReadURLFn(ctx, key)
+	}
+	return "https://test-bucket.s3.us-east-1.amazonaws.com/" + key + "?signed=test", nil
+}
+func (f *FakeImageStore) Delete(ctx context.Context, key string) error {
+	f.DeletedURL = append(f.DeletedURL, key)
 	return f.DeleteErr
 }

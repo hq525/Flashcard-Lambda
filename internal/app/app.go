@@ -11,6 +11,7 @@ import (
 	"github.com/aws/aws-sdk-go-v2/service/dynamodb"
 	"github.com/aws/aws-sdk-go-v2/service/s3"
 
+	"flashcard_lambda/internal/auth"
 	"flashcard_lambda/internal/config"
 	"flashcard_lambda/internal/httpapi"
 	"flashcard_lambda/internal/persistence"
@@ -24,6 +25,10 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 		return nil, err
 	}
 
+	authenticate, err := auth.NewMiddleware(ctx, cfg.AuthIssuer, cfg.AuthClientID)
+	if err != nil {
+		return nil, err
+	}
 	sdkConfig, err := awsconfig.LoadDefaultConfig(ctx)
 	if err != nil {
 		return nil, err
@@ -57,6 +62,7 @@ func NewHandler(ctx context.Context) (http.Handler, error) {
 	}
 
 	return httpapi.NewRouter(httpapi.Deps{
+		Authenticate: authenticate, AllowedOrigin: cfg.AllowedOrigin, UploadBudget: store,
 		Categories:     categories,
 		Decks:          decks,
 		Tags:           tags,

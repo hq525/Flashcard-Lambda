@@ -1,69 +1,48 @@
 # Flashcard Lambda
 
-Go backend for a flashcard application. The app is a standard `http.Handler`; in production it runs on AWS Lambda behind API Gateway (via `aws-lambda-go-api-proxy`), with DynamoDB for persistence and S3 for image storage. Locally it runs as a plain HTTP server.
+Go backend for a single owner's private flashcard library. It runs on AWS Lambda behind API Gateway, with DynamoDB persistence and private S3 images. Both production and the loopback development server require a verified Cognito ID token with the `owner` group. Public signup is disabled.
+
+**Already deployed?** Use the [security cutover runbook](docs/security-deployment-2026-09-20.md). This release changes authentication and image storage together; deploying only one repository interrupts the old client.
 
 ## Architecture
 
-```
-API Gateway → Lambda → httpadapter → http.Handler (router)
-                                          │
-                                    generic handlers
-                                          │
-                            Repository[T]        ImageStore
-                            (DynamoDB impl)      (S3 impl)
-```
+`API Gateway → Lambda → httpadapter → authenticated http.Handler → DynamoDB / private S3`
 
-**Request flow:**
-1. `cmd/lambda/main.go` — Lambda entry point; `cmd/server/main.go` — identical app as a local HTTP server
-2. `internal/app/app.go` — wires concrete implementations (DynamoDB, S3) into the router; the only place implementations are chosen
-3. `internal/httpapi/` — routing (Go 1.22 `ServeMux` method patterns), CORS middleware, generic CRUD handlers, request validation
-4. `internal/persistence/` — `Repository[T, C, U]` interface + one generic DynamoDB implementation; all list operations are GSI **Queries** (no table Scans)
-5. `internal/service/cascade.go` — cascading deletes (category → decks → cards → sections/images, including S3 objects)
-6. `internal/storage/` — `ImageStore` interface + S3 implementation (presigned uploads, deletes)
+- `internal/auth/` independently verifies RS256 signatures, issuer, audience, expiry, token type and owner group.
+- `internal/httpapi/` handles strict JSON validation, typed parent checks, CORS and raw image uploads.
+- `internal/persistence/` implements typed repositories and bounded GSI queries. Administrative migration commands separately use bounded scans.
+- `internal/service/` cascades deletes through child records and managed image objects.
+- `internal/storage/` validates image bytes, writes immutable objects and signs five-minute downloads.
+- `internal/app/` wires AWS clients into the same handler used by Lambda and local development.
 
-Handlers depend only on the `Repository` and `ImageStore` interfaces, so swapping DynamoDB or S3 for another backend means adding an implementation and changing one wiring function (`app.NewHandler`).
+## Data and API
 
-## Data Model
+All entities share a DynamoDB table partitioned by `id`, with an `entity_type` discriminator. Existing IDs, card content and review history are retained.
 
-```
-Category
-└── Deck
-    └── Card
-        ├── CardReview (immutable FSRS review history)
-        ├── CardAnswerSection (ordered by sequence_number)
-        │   └── CardAnswerSectionImage (ordered by sequence_number)
-        └── CardQuestionImage (ordered by sequence_number)
-
-Tag  (associated with Cards via tag_ids)
-```
-
-All entities live in one DynamoDB table (partition key `id`) and carry an `entity_type` attribute. List operations query GSIs:
-
-| Index | Partition key | Serves |
+| Resource | List filter | Relationship |
 |---|---|---|
-| `entity_type-index` | `entity_type` | list categories, list tags |
-| `category_id-index` | `category_id` | decks by category |
-| `deck_id-index` | `deck_id` | cards by deck |
-| `card_id-index` | `card_id` | question images and answer sections by card (disambiguated by `entity_type` filter) |
-| `card_answer_section_id-index` | `card_answer_section_id` | section images |
+| `/categories`, `/category` | — | Contains decks |
+| `/decks`, `/deck` | `categoryId` | Contains cards |
+| `/tags`, `/tag` | — | Associated with cards |
+| `/cards`, `/card` | `deckId` | Contains answer sections and question images |
+| `/card-answer-sections`, `/card-answer-section` | `cardId` | Contains answer images |
+| `/card-question-images`, `/card-question-image` | `cardId` | Private question image |
+| `/card-answer-section-images`, `/card-answer-section-image` | `cardAnswerSectionId` | Private answer image |
 
-## API Routes
+Use `GET /<plural>` for lists and `GET/PUT/DELETE /<singular>?id=...` for individual records. Most `POST /<singular>` requests accept JSON. Deletes cascade to descendants. The GSIs are `entity_type-index`, `category_id-index`, `deck_id-index`, `card_id-index`, and `card_answer_section_id-index`.
 
-Every resource follows the same pattern: `GET /<plural>` (list), `GET/POST/PUT/DELETE /<singular>` (by `?id=`, body for POST/PUT).
+All routes require `Authorization: Bearer <Cognito ID token>`. API keys grant no access. The backend verifies identity even without API Gateway. CORS accepts one configured frontend origin; it is not authentication.
 
-| Resource | List param | Notes |
-|---|---|---|
-| `/categories`, `/category` | — | DELETE cascades to decks and below |
-| `/decks`, `/deck` | `categoryId` | DELETE cascades to cards and below |
-| `/tags`, `/tag` | — | |
-| `/cards`, `/card` | `deckId` | DELETE cascades to sections and images |
-| `/card-answer-sections`, `/card-answer-section` | `cardId` | DELETE cascades to section images |
-| `/card-question-images`, `/card-question-image` | `cardId` | DELETE also removes the S3 object |
-| `/card-answer-section-images`, `/card-answer-section-image` | `cardAnswerSectionId` | DELETE also removes the S3 object |
+Image creation uses raw bytes:
 
-`GET /presigned-url?fileName=<name>&contentType=image/<type>[&imageType=answer]` returns `{presignedUrl, imageUrl}`. `contentType` is required, must be an `image/*` type, and is signed into the upload URL. Uploads land in `question-images/` or (with `imageType=answer`) `answer-images/` in the single image bucket.
+- `POST /card-question-image?cardId=<id>&sequenceNumber=1`
+- `POST /card-answer-section-image?cardAnswerSectionId=<id>&sequenceNumber=1`
 
-**Response conventions:** JSON everywhere (errors are `{"message": "..."}`), CORS headers on every response including errors, `201` on create, `404` when an id doesn't exist, `400` for missing params/validation failures, `422` for malformed JSON. PUT bodies are validated like POST bodies (required fields enforced).
+Send `Content-Type: image/png`, `image/jpeg`, `image/gif`, or `image/webp`. Input is limited to **4 MiB**, dimensions to 8192 per axis and 16 million pixels total. The server decodes and re-encodes each image as JPEG or static PNG, removing metadata and trailing content. Animation and EXIF orientation metadata are not preserved. Normalized output is limited to 10 MiB. An atomic UTC-day budget permits 100 uploads and 100 MiB of normalized data; failed storage attempts may consume budget. Exceeding the budget returns `429`.
+
+Image DTOs contain a five-minute signed `imageURL`, never a storage key. Image downloads permit only short browser caching (`private, max-age=60, must-revalidate`); API JSON remains `no-store`. Signed response headers apply this policy to existing managed images too, without rewriting their metadata. Image PUT accepts only `sequenceNumber`; client URLs cannot select an S3 object. Unmigrated legacy images return an empty URL and cannot be deleted until migrated. `GET /presigned-url` returns `410`; old clients must reload the updated frontend.
+
+Responses are JSON: `201` on create, `404` for absent or wrong-type IDs, `400` for invalid parameters/parents, `422` for malformed or unknown JSON fields. Requests reject trailing JSON. Generic JSON bodies are limited to 128 KiB (reviews: 4 KiB), and IDs to 128 bytes. Lists fail explicitly with `413` above 1000 items, 50 query pages or 4 MiB; they never silently truncate. Successful responses are also limited to 4 MiB, with an additional escaped-body check below Lambda's 6 MiB proxy-envelope limit. Large libraries need pagination before raising these limits. Responses use `no-store`; requests have a 25-second context deadline.
 
 ## Spaced repetition
 
@@ -85,102 +64,58 @@ Cards store `schedule` (due time, difficulty, stability, stage, counts and last 
 
 Deploy the backend before the frontend. No table/index migration, bulk backfill or mass rescheduling is required. Existing cards without `schedule` keep their original last-review-plus-Leitner-interval due date until their next real review. Invalid or future legacy timestamps are treated as new and due now.
 
-On that first review, the previous interval provides a conservative starting stability estimate, with neutral difficulty; legacy review counts and ratings are not invented. FSRS counts and recorded history begin with that actual review. This uses default FSRS weights, not a model trained on personal history; the saved records allow future parameter fitting. Existing card content and image URLs are unchanged.
+On that first review, the previous interval provides a conservative starting stability estimate, with neutral difficulty; legacy review counts and ratings are not invented. FSRS counts and recorded history begin with that actual review. This uses default FSRS weights, not a model trained on personal history; the saved records allow future parameter fitting. Existing card content is unchanged. The separate security migration replaces public image delivery with signed URLs while preserving image IDs and source objects.
 
 The old general card PUT remains compatible for cards that have not migrated. Once a card has FSRS state, PUT only changes card content; clients must use the review endpoint to record recall and change scheduling.
 
-## Environment Variables
+## Environment and development
 
-| Variable | Description |
+Use Go **1.26.8 or newer**. Tests use mocks and need no AWS credentials. Running the server requires AWS credentials and an owner login against a development Cognito pool.
+
+| Variable | Meaning |
 |---|---|
 | `DYNAMODB_TABLE` | DynamoDB table name |
-| `S3_BUCKET` | S3 bucket for all card images (`question-images/` and `answer-images/` prefixes) |
-
-## Development
-
-**Prerequisites:** Go 1.26+ (required by the FSRS library), AWS credentials configured
+| `S3_BUCKET` | Private bucket for `images/<image-id>.png` or `.jpg` |
+| `AUTH_ISSUER` | Cognito user-pool issuer, not the hosted login domain |
+| `AUTH_CLIENT_ID` | Public Cognito app client ID |
+| `ALLOWED_ORIGIN` | Exact frontend origin, without trailing slash |
+| `AWS_REGION` | AWS region for local AWS clients |
 
 ```bash
-# Run tests / vet
 go test ./...
 go vet ./...
-
-# Run the API locally (uses your AWS credentials)
-export DYNAMODB_TABLE=flash-card-app-dev
-export S3_BUCKET=flash-card-app-media-dev
-go run ./cmd/server -addr :8080
-curl 'http://localhost:8080/categories'
+cp .env.example .env
+# Fill in isolated development resource and authentication settings.
+make run
 ```
 
-## Deployment (SAM)
+The local server binds `127.0.0.1:8080`, rejects non-loopback addresses, and enforces the same JWT authentication. There is no development auth bypass. Register the development frontend callback and logout URL in its own Cognito app client. Environment files are ignored except `.env.example`.
 
-`template.yaml` defines the whole stack per stage: REST API (with API key auth), Lambda (`provided.al2023`/arm64), the DynamoDB table with all five GSIs, and the image bucket (browser-upload CORS + public read).
+## Infrastructure and deployment
 
-**Prerequisites:** [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/install-sam-cli.html), AWS credentials configured with permission to create the stack's resources (API Gateway, Lambda, DynamoDB, S3, IAM).
+`template.yaml` retains the existing table and bucket, adds Cognito with admin-only account creation, protects API Gateway, and configures the backend to require the `owner` group. Only assign that group to the intended single owner. The bucket blocks public access and requires TLS. DynamoDB point-in-time recovery and S3 versioning protect future changes; old noncurrent object versions expire after 30 days. Backups and retained versions incur storage charges.
+
+The Lambda role has typed database operations and access only to this bucket's `images/*` prefix. API throttling and Lambda concurrency limit traffic; they are not guaranteed billing caps. Paid method-level CloudWatch metrics are disabled; ordinary stage metrics remain available. The 512 MiB function allocation supports bounded image decoding; recovery protection and upload validation remain enabled. Administrative migration permissions are separate from the runtime role.
+
+For an existing deployment, follow the [backup, maintenance and cutover procedure](docs/security-deployment-2026-09-20.md), including frontend environment changes and owner provisioning. `FrontendOrigin` is a required stack parameter. A production build and deployment are explicit rollout steps, not performed by local tests.
 
 ```bash
+# Syntax/infrastructure validation; does not deploy.
+sam validate --lint
+# Build/deploy only during the reviewed rollout:
 sam build
-sam deploy --guided --parameter-overrides StageName=dev   # first time
-sam deploy --parameter-overrides StageName=prod
-
-# Get the API key the frontend must send as X-Api-Key
-aws apigateway get-api-keys --include-values --query 'items[].{name:name,value:value}'
+sam deploy --stack-name flashcard-prod --region ap-southeast-1 --resolve-s3 --capabilities CAPABILITY_IAM --parameter-overrides StageName=prod FrontendOrigin=https://main.d21qooye31nta2.amplifyapp.com
 ```
 
-## Migrating an existing (manually created) deployment
-
-The SAM stack creates **new** resources. To keep using existing tables/buckets instead, deploy only the function (or keep deploying the zip by hand) and:
-
-**1. Add the GSIs to the existing table** (one at a time; wait for `IndexStatus: ACTIVE` between commands — DynamoDB builds one GSI at a time):
+For older manually created tables, the separate `cmd/backfill` command adds missing `entity_type` attributes (dry run by default). Complete and verify that schema backfill before media migration; image migration deliberately selects typed image records only. Do not restore the old public URL deletion behavior or grant the Lambda legacy-bucket access.
 
 ```bash
-for idx in entity_type category_id deck_id card_id card_answer_section_id; do
-  aws dynamodb update-table --table-name flash-card-app-dev \
-    --attribute-definitions AttributeName=$idx,AttributeType=S \
-    --global-secondary-index-updates "[{\"Create\":{\"IndexName\":\"$idx-index\",\"KeySchema\":[{\"AttributeName\":\"$idx\",\"KeyType\":\"HASH\"}],\"Projection\":{\"ProjectionType\":\"ALL\"}}}]"
-  aws dynamodb wait table-exists --table-name flash-card-app-dev  # then poll describe-table for the index
-done
+# Metadata validation only: no writes and no S3 object reads.
+go run ./cmd/migrate-media --table flash-card-app-prod --bucket flash-card-app-media-prod --source-buckets flash-card-app-media-prod --region ap-southeast-1
 ```
 
-**2. Backfill `entity_type`** on legacy items (required for answer sections and question images, which share `card_id-index`):
+Migration requires explicit `--apply` to write, validates source buckets/paths, copies and normalizes images, and conditionally attaches immutable keys. Original objects and URLs remain for recovery; they must be private. See the runbook before applying.
 
-```bash
-go run ./cmd/backfill -table flash-card-app-dev          # dry run, prints what it would set
-go run ./cmd/backfill -table flash-card-app-dev -apply
-```
+## Security evidence
 
-**3. Bucket consolidation:** new uploads go to the single `S3_BUCKET` under `question-images/`/`answer-images/`. Existing images keep working — their full URL is stored on the record, and deletes parse bucket+key from that URL — but the Lambda role needs `s3:DeleteObject` on the legacy buckets (the template includes this; remove once legacy images are gone). `S3_ANSWER_IMAGE_BUCKET` is no longer read.
-
-**4. Breaking API changes for the frontend:**
-- `/presigned-url` now requires `contentType` (an `image/*` value) and the upload PUT must send the same `Content-Type` header
-- With the SAM stack, every request must send an `X-Api-Key` header
-- `GET /<entity>?id=missing` returns `404` instead of `200` with `null`; lists return `[]` instead of `null`; errors are JSON
-
-## Project Structure
-
-```
-cmd/
-  lambda/       # Lambda entry point (package main → bootstrap binary)
-  server/       # local HTTP server entry point
-  backfill/     # one-time entity_type migration
-internal/
-  app/          # dependency wiring (choose implementations here)
-  config/       # environment variable loading
-  httpapi/      # router, CORS middleware, generic CRUD handlers, presign handler
-  models/       # entities and request structs (validator tags)
-  persistence/  # Repository interface, generic DynamoDB store, per-entity configs
-  service/      # cascading deletes
-  storage/      # ImageStore interface, S3 implementation
-  testutil/     # in-memory fakes for Repository and ImageStore
-template.yaml   # SAM stack (API, Lambda, table + GSIs, bucket)
-Makefile        # sam build target
-```
-
-## Dependencies
-
-- [`aws-lambda-go`](https://github.com/aws/aws-lambda-go) — Lambda runtime
-- [`aws-lambda-go-api-proxy`](https://github.com/awslabs/aws-lambda-go-api-proxy) — API Gateway events ↔ `http.Handler`
-- [`aws-sdk-go-v2`](https://github.com/aws/aws-sdk-go-v2) — DynamoDB and S3 clients
-- [`google/uuid`](https://github.com/google/uuid) — entity IDs
-- [`go-fsrs/v4`](https://github.com/open-spaced-repetition/go-fsrs) — FSRS 6 scheduling and learning/relearning steps
-- [`go-playground/validator.v9`](https://github.com/go-playground/validator) — request validation
+The [original audit](docs/security-audit-2026-09-20.md) describes the vulnerable baseline. The [remediation record](docs/security-remediation-2026-09-20.md) tracks implemented fixes, validation and outstanding production rollout. Historical exploit probes are not the current regression suite; normal `go test ./...` runs the new security tests.

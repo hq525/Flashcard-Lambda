@@ -53,7 +53,7 @@ func (r *DynamoRepository[T, C, U]) List(ctx context.Context, parentID string) (
 }
 
 func (r *DynamoRepository[T, C, U]) Get(ctx context.Context, id string) (*T, error) {
-	return GetItem[T](ctx, r.store, id)
+	return GetItem[T](ctx, r.store, id, r.cfg.EntityType)
 }
 
 func (r *DynamoRepository[T, C, U]) Create(ctx context.Context, req C) (*T, error) {
