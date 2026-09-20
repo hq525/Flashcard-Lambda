@@ -1,21 +1,17 @@
 # Private library: production security cutover
 
-Prepared 20 September 2026 for the sole owner, **zhaohanqing96@gmail.com**. The owner subsequently authorized deployment; see the [rollout record](security-rollout-2026-09-20.md) for executed actions and verification. The procedure below remains the maintenance/recovery reference; do not replay it blindly on the upgraded stack.
+Prepared 20 September 2026 for a single owner's private library. The authorized deployment is documented in the [rollout record](security-rollout-2026-09-20.md). This public runbook uses example frontend URLs and template-default resource names; obtain actual identifiers from your own stack outputs and keep owner contact details and recovery inventory privately. Verify the AWS account, region and resources before running any command. Do not replay the legacy cutover on an already upgraded stack.
 
-## Confirmed existing deployment
+## Historical baseline before the cutover
 
-Read-only AWS inspection found:
+Read-only inspection before remediation found the following. These are historical observations, not the current deployed controls:
 
-| Setting | Current value |
+| Setting | Before remediation |
 |---|---|
-| Region / account | `ap-southeast-1` / `725020099811` |
-| CloudFormation stack | `flashcard-prod` |
-| Lambda | `flashcard-backend-prod`, reserved concurrency 5 |
-| DynamoDB | `flash-card-app-prod`, point-in-time recovery disabled |
-| S3 | `flash-card-app-media-prod`, public bucket policy, versioning not enabled |
-| API | `https://nzbsoybije.execute-api.ap-southeast-1.amazonaws.com/prod` |
-| Amplify | app `d21qooye31nta2`, branch `main`, automatic build enabled; app-level hosting-password protection was enabled in the deployment-time snapshot and preserved |
-| Frontend | `https://main.d21qooye31nta2.amplifyapp.com` |
+| Lambda | Reserved concurrency 5 |
+| DynamoDB | Point-in-time recovery disabled |
+| S3 | Public bucket policy, versioning not enabled |
+| Amplify | Automatic builds enabled; existing app-level hosting-password protection preserved during the cutover |
 | Amplify variables | `VITE_API_BASE_URL`, `VITE_API_KEY` |
 | Current SPA rewrite | `/<*>` → `/index.html`, status `404-200` |
 
@@ -35,7 +31,7 @@ go vet ./...
 sam validate --lint
 go version
 sam build
-sam deploy --stack-name flashcard-prod --region ap-southeast-1 --resolve-s3 --capabilities CAPABILITY_IAM --parameter-overrides StageName=prod FrontendOrigin=https://main.d21qooye31nta2.amplifyapp.com --no-execute-changeset
+sam deploy --stack-name flashcard-prod --region ap-southeast-1 --resolve-s3 --capabilities CAPABILITY_IAM --parameter-overrides StageName=prod FrontendOrigin=https://flashcards.example.com --no-execute-changeset
 ```
 
 Review the resulting change set before executing it. The table and media bucket must be **updated in place**, preserving names and logical IDs. Expected changes are Cognito resources; authenticated API methods; new Lambda code/configuration/permissions; removal of old API-key/usage-plan resources; private, encrypted and versioned media; DynamoDB recovery/TTL; exact CORS; and throttling. Stop on any unexpected resource replacement or deletion. `Retain` protects a resource from deletion but does not make accidental replacement an acceptable migration.
@@ -61,7 +57,7 @@ aws dynamodb create-backup --table-name flash-card-app-prod --backup-name flashc
 
 Record the returned backup ARN privately and use `describe-backup --backup-arn <arn>` until its status is `AVAILABLE`. Use a unique backup name on later attempts. Preserve the deployment configuration and record metadata outside public Git history. The new PITR setting protects future history; it does not retroactively create a restore point for the old deployment.
 
-Repeat the media inventory while writes are frozen. Currently no media backup is needed because the bucket is empty. If objects have appeared, create and verify a **private** backup with a recovery identity before continuing; enabling versioning now does not recover previously deleted versions. Do not delete original media as part of this rollout.
+Repeat the media inventory while writes are frozen. If there are no objects, record the empty inventory. Otherwise, create and verify a **private** backup with a recovery identity before continuing; enabling versioning now does not recover previously deleted versions. Do not delete original media as part of this rollout.
 
 Disable the legacy API key(s) belonging to this stack. Identify key IDs through the stack's resources and usage-plan associations; do not print key values or disable unrelated applications' keys. A known ID can be disabled with:
 
@@ -87,7 +83,7 @@ Outputs include `UserPoolId`, `AuthIssuer`, `AuthClientId`, `AuthDomain`, `Media
 
 ## 4. Provision only the owner
 
-Create **zhaohanqing96@gmail.com** in the new pool and add only that account to `owner`. Admin-only signup is already in the template. Never assign `owner` to a general user group or enable self-registration. AWS administrators who can manage this pool remain trusted administrators of the library.
+Create the intended owner's account in the new pool and add only that account to `owner`. Admin-only signup is already in the template. Never assign `owner` to a general user group or enable self-registration. AWS administrators who can manage this pool remain trusted administrators of the library.
 
 For a rollout without an invitation email, use the Cognito console or `AdminCreateUser` with `MessageAction=SUPPRESS`, the owner email and a temporary password entered through a masked prompt. Do not place passwords in shell arguments, source files, tool messages or logs. The example below uses a local terminal and requires `boto3`; it outputs no credentials and sends no email. Replace the pool ID with the stack output before running.
 
@@ -96,7 +92,7 @@ import getpass
 import boto3
 
 pool = input("UserPoolId from flashcard-prod outputs: ").strip()
-owner = "zhaohanqing96@gmail.com"
+owner = input("Owner email address: ").strip()
 password = getpass.getpass("Temporary owner password (14+ characters, upper/lower/number/symbol): ")
 assert password == getpass.getpass("Repeat temporary password: "), "Passwords differ"
 client = boto3.client("cognito-idp", region_name="ap-southeast-1")
@@ -145,7 +141,7 @@ Set these five **public** Amplify variables from the stack outputs; preserve unr
 | `VITE_AUTH_DOMAIN` | `AuthDomain` |
 | `VITE_MEDIA_ORIGIN` | `MediaOrigin` |
 
-The expected hosted domain is `https://flashcards-725020099811-ap-southeast-1-prod.auth.ap-southeast-1.amazoncognito.com`. Keep `customHttp.yml` synchronized with the exact deployed API/media/Cognito origins. Register callback `https://main.d21qooye31nta2.amplifyapp.com/auth/callback` and logout `https://main.d21qooye31nta2.amplifyapp.com/`; the SAM template supplies these. ID and access tokens are both five minutes; refresh tokens rotate and last at most one day. [AWS refresh-token behavior](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token.html).
+Use the hosted domain returned by `AuthDomain`. Keep `customHttp.yml` synchronized with the exact deployed API/media/Cognito origins. Register callback `https://flashcards.example.com/auth/callback` and logout `https://flashcards.example.com/`, replacing the example origin with your own; the SAM template derives both from `FrontendOrigin`. ID and access tokens are both five minutes; refresh tokens rotate and last at most one day. [AWS refresh-token behavior](https://docs.aws.amazon.com/cognito/latest/developerguide/amazon-cognito-user-pools-using-the-refresh-token.html).
 
 Verify Amplify's SPA rewrite serves `/auth/callback` directly without rewriting actual JavaScript/CSS files. The existing `404-200` fallback must be tested after deployment; use AWS's documented SPA rewrite if needed. [Amplify rewrite examples](https://docs.aws.amazon.com/amplify/latest/userguide/redirect-rewrite-examples.html).
 

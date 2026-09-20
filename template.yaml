@@ -11,7 +11,7 @@ Parameters:
 
   FrontendOrigin:
     Type: String
-    Description: Exact frontend origin, without a trailing slash (production uses https://main.d21qooye31nta2.amplifyapp.com).
+    Description: Exact frontend origin, without a trailing slash (for example https://flashcards.example.com).
     AllowedPattern: '^https://[A-Za-z0-9.-]+(:[0-9]+)?$|^http://localhost:[0-9]+$'
 
 Resources:

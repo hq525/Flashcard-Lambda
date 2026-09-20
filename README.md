@@ -2,6 +2,8 @@
 
 Go backend for a single owner's private flashcard library. It runs on AWS Lambda behind API Gateway, with DynamoDB persistence and private S3 images. Both production and the loopback development server require a verified Cognito ID token with the `owner` group. Public signup is disabled.
 
+The companion [React frontend](https://github.com/hq525/flashcard-frontend) provides the editor and study UI. For portfolio review, the tests use synthetic data and run without AWS credentials. Use an isolated deployment with sample content for demos; the owner's live library remains private.
+
 **Already deployed?** Use the [security cutover runbook](docs/security-deployment-2026-09-20.md). This release changes authentication and image storage together; deploying only one repository interrupts the old client.
 
 ## Architecture
@@ -104,8 +106,10 @@ For an existing deployment, follow the [backup, maintenance and cutover procedur
 sam validate --lint
 # Build/deploy only during the reviewed rollout:
 sam build
-sam deploy --stack-name flashcard-prod --region ap-southeast-1 --resolve-s3 --capabilities CAPABILITY_IAM --parameter-overrides StageName=prod FrontendOrigin=https://main.d21qooye31nta2.amplifyapp.com
+sam deploy --stack-name flashcard-prod --region ap-southeast-1 --resolve-s3 --capabilities CAPABILITY_IAM --parameter-overrides StageName=prod FrontendOrigin=https://flashcards.example.com
 ```
+
+The frontend origin above is an example; replace it with your deployment's exact origin. Verify the AWS account, region and stack before deploying. The table and bucket names below are template defaults; use your stack's `TableName` and `BucketName` outputs.
 
 For older manually created tables, the separate `cmd/backfill` command adds missing `entity_type` attributes (dry run by default). Complete and verify that schema backfill before media migration; image migration deliberately selects typed image records only. Do not restore the old public URL deletion behavior or grant the Lambda legacy-bucket access.
 
@@ -118,4 +122,4 @@ Migration requires explicit `--apply` to write, validates source buckets/paths, 
 
 ## Security evidence
 
-The [original audit](docs/security-audit-2026-09-20.md) describes the vulnerable baseline. The [remediation record](docs/security-remediation-2026-09-20.md) tracks implemented fixes, validation and outstanding production rollout. Historical exploit probes are not the current regression suite; normal `go test ./...` runs the new security tests.
+The [original audit](docs/security-audit-2026-09-20.md) describes the vulnerable baseline. The [remediation record](docs/security-remediation-2026-09-20.md) tracks implemented fixes, and the [rollout record](docs/security-rollout-2026-09-20.md) records deployment verification and its limits. Historical exploit probes are not the current regression suite; normal `go test ./...` runs the new security tests.
