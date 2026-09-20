@@ -7,7 +7,8 @@ Authorized by the owner in this session. Both repositories' security remediation
 - AWS account `725020099811`, region `ap-southeast-1`.
 - CloudFormation `flashcard-prod`: `UPDATE_COMPLETE`; fresh Go 1.26.8 ARM64 build deployed and the live bootstrap bytes verified against the local build.
 - DynamoDB `flash-card-app-prod` and S3 `flash-card-app-media-prod` updated in place, without replacement.
-- Amplify app `d21qooye31nta2`, `main`: source commit `db1e4695084208352a49dc18ca864d44aec6e48c`; release job **8** succeeded with verified Cognito/API/media environment settings.
+- Amplify app `d21qooye31nta2`, `main`: source commit `4af8f29d38dcf3cc18a81f500ccbcda055a045e3`; release job **9** succeeded with verified Cognito/API/media environment settings.
+- Backend source commit `8b096f9` and frontend source changes pushed to their respective GitHub `main` branches.
 - Live app: https://main.d21qooye31nta2.amplifyapp.com/
 - Sole Cognito owner: `zhaohanqing96@gmail.com`; pool `ap-southeast-1_4DchsrDuF`, public client `1ndjces5ihpbn7ce55c99oj8lf`. Account created with invitation suppressed; the owner set the permanent password through a local masked prompt. No password was logged or stored by the deployment tooling.
 
@@ -29,11 +30,17 @@ Authorized by the owner in this session. Both repositories' security remediation
 - One pool user and one `owner` member; self-registration disabled. Optional TOTP remains available but was not enrolled automatically.
 - Amplify public configuration updated at app level, conflicting branch overrides removed, old `VITE_API_KEY` removed. Current build spec and security/cache headers supplied to Amplify.
 - The production frontend build passed with its actual public environment settings. Chrome renders the owner-only sign-in screen and reaches the correct Cognito authorization-code + S256 PKCE flow.
+- Owner login completed in Chrome and the existing library loaded. Production returns to `/auth/callback/`; the frontend now accepts the exact callback with or without its trailing slash. Regression tests reproduced the failure before the fix. All **187 frontend tests** and the production build passed afterward.
+- Created an isolated temporary category, deck and card through the UI; updated the card; completed a study review; deleted the temporary category and its descendants. A strongly consistent DynamoDB read then matched all original record contents exactly: **two original records, zero remaining test records**.
+- A full page reload retained the owner session and successfully fetched the original library. The browser was left open on that library.
+- DynamoDB TTL is enabled on `expires_at`.
 
-## Remaining live checks
+## Verification limits
 
-Owner sign-in and authenticated CRUD/upload/session smoke checks are in progress. Direct HTTP header/artifact checks encountered the existing Amplify hosting-password gate. It was already enabled in the pre-deployment app snapshot and remains unchanged; Chrome's existing access reaches the app. The encrypted credential returned by Amplify cannot be reused as the plaintext hosting password.
+The live image-upload check could not select its synthetic PNG because the Chrome extension does not have file-URL access. No test media was uploaded. Image validation, image authorization and session-failure scenarios have automated coverage; their full browser smoke scenarios were not all repeated against production.
 
-The initial automatic frontend build (job 7) ran before the new environment was applied. Job 8 rebuilt the same source after configuration and is the intended release. An AWS CLI stdin-JSON parsing incompatibility was resolved by using the installed AWS SDK for environment/password setup.
+Direct HTTP header/artifact checks encountered the existing Amplify hosting-password gate. It was already enabled in the pre-deployment app snapshot and remains unchanged; Chrome's existing access reaches the app. The encrypted credential returned by Amplify cannot be reused as the plaintext hosting password. Header configuration was verified through Amplify settings; on-wire headers behind the gate were not independently inspected.
+
+The initial automatic frontend build (job 7) ran before the new environment was applied. Job 8 rebuilt after configuration; job 9 includes the callback fix and is the current release. An AWS CLI stdin-JSON parsing incompatibility was resolved by using the installed AWS SDK for environment/password setup.
 
 The local password setup program remains in the private deployment snapshot directory; it contains no password. Original app/database state and presigned diagnostic URLs were not committed to Git.
