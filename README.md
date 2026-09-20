@@ -21,6 +21,82 @@ The companion [React frontend](https://github.com/hq525/flashcard-frontend) prov
 
 All entities share a DynamoDB table partitioned by `id`, with an `entity_type` discriminator. Existing IDs, card content and review history are retained.
 
+### Entity relationships
+
+The diagram shows the logical content model, with selected DynamoDB attribute names from the [entity models](internal/models/db.go) and [review models](internal/models/review.go). Each box is an item type in the same table. `PK` marks the table partition key; `FK` marks a logical reference, not a DynamoDB-enforced foreign key. `||` means exactly one and `o{` / `}o` mean zero or more.
+
+```mermaid
+erDiagram
+    CATEGORY ||..o{ DECK : contains
+    DECK ||..o{ CARD : contains
+    CARD }o..o{ TAG : tagged_with
+    CARD ||..o{ CARD_ANSWER_SECTION : contains
+    CARD ||..o{ CARD_QUESTION_IMAGE : illustrates_question
+    CARD_ANSWER_SECTION ||..o{ CARD_ANSWER_SECTION_IMAGE : illustrates_answer
+    CARD ||..o{ CARD_REVIEW : records
+
+    CATEGORY {
+        string id PK
+        string name
+        string description
+    }
+    DECK {
+        string id PK
+        string category_id FK
+        string name
+        string description
+    }
+    CARD {
+        string id PK
+        string deck_id FK
+        string[] tag_ids FK
+        string question
+        map schedule "Optional embedded FSRS state"
+        uint64 review_revision
+    }
+    TAG {
+        string id PK
+        string name
+        string description
+    }
+    CARD_ANSWER_SECTION {
+        string id PK
+        string card_id FK
+        uint16 sequence_number
+        string title
+        string answer
+    }
+    CARD_QUESTION_IMAGE {
+        string id PK
+        string card_id FK
+        uint16 sequence_number
+        string storage_key "Private S3 object key"
+    }
+    CARD_ANSWER_SECTION_IMAGE {
+        string id PK
+        string card_answer_section_id FK
+        uint16 sequence_number
+        string storage_key "Private S3 object key"
+    }
+    CARD_REVIEW {
+        string id PK
+        string card_id FK
+        string request_id
+        string rating
+        string reviewed_at
+        uint64 revision
+        map previous_schedule "Embedded snapshot before review"
+        map schedule "Embedded snapshot after review"
+    }
+```
+
+- Cards and tags have a many-to-many association stored in each card's `tag_ids` list; there is no join table.
+- A card's `schedule` and each review's schedule snapshots are embedded maps, not separate entities. Each review atomically updates the card's scheduling state and adds an immutable history item.
+- Image items store metadata and a `storage_key`; image bytes live in private S3 objects. The API generates signed download URLs when reading images. Legacy `image_url` attributes may remain for recovery.
+- The shared `entity_type`, routine creation/update timestamps, legacy scheduling fields and internal review-chain links are omitted for readability. The table also holds internal daily `upload_budget` items with a TTL; those counters have no content relationships and are omitted here. Owner authentication lives in Cognito; this single-owner model has no user entity.
+
+### API resources
+
 | Resource | List filter | Relationship |
 |---|---|---|
 | `/categories`, `/category` | — | Contains decks |
