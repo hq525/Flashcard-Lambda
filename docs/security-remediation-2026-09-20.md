@@ -1,10 +1,10 @@
 # Security remediation record — 20 September 2026
 
-Implemented in both repositories on `security/audit-remediation-2026-09-20`. The owner chose one private library, with **zhaohanqing96@gmail.com** as the sole Cognito account. The owner subsequently authorized production deployment; see the [rollout record](security-rollout-2026-09-20.md) for deployed resources and live verification.
+Implemented in both repositories on `security/audit-remediation-2026-09-20`. The application uses one private library and a single admin-provisioned Cognito owner account. The owner subsequently authorized production deployment; see the [rollout record](security-rollout-2026-09-20.md) for deployed controls and live verification. Owner contact details and account-specific recovery inventory are maintained privately.
 
 ## Findings and fixes
 
-| Finding | Implemented correction | Production follow-up |
+| Finding | Implemented correction | Rollout requirement (status in rollout record) |
 |---|---|---|
 | F1: browser key grants full access | Cognito authorization code + PKCE, admin-only account creation, owner-group authorization, verified issuer/audience/RS256/expiry/ID-token claims in Go and Cognito at API Gateway; no API-key fallback | Provision owner; deploy both repos; retire old keys and frontend assets |
 | F2: client URLs choose deletion target | Server-generated immutable UUID-bound storage keys; no image URL/key inputs; typed parent validation; deletion constrained to one bucket and `images/*` | Migrate any legacy image records before deleting them |

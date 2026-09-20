@@ -1,23 +1,22 @@
 # Security production rollout — 20 September 2026
 
-Authorized by the owner in this session. Both repositories' security remediation, session usability refinements and aged npm upgrades are included.
+The owner authorized this rollout. Both repositories' security remediation, session usability refinements and aged npm upgrades are included. This public record preserves technical outcomes; account identifiers, owner contact details and backup identifiers are maintained in private operational records.
 
 ## Deployed resources
 
-- AWS account `725020099811`, region `ap-southeast-1`.
+- Deployment region: `ap-southeast-1`.
 - CloudFormation `flashcard-prod`: `UPDATE_COMPLETE`; fresh Go 1.26.8 ARM64 build deployed and the live bootstrap bytes verified against the local build.
 - DynamoDB `flash-card-app-prod` and S3 `flash-card-app-media-prod` updated in place, without replacement.
-- Amplify app `d21qooye31nta2`, `main`: source commit `4af8f29d38dcf3cc18a81f500ccbcda055a045e3`; release job **9** succeeded with verified Cognito/API/media environment settings.
+- Amplify `main`: source commit `4af8f29d38dcf3cc18a81f500ccbcda055a045e3`; release job **9** succeeded with verified Cognito/API/media environment settings.
 - Backend source commit `8b096f9` and frontend source changes pushed to their respective GitHub `main` branches.
-- Live app: https://main.d21qooye31nta2.amplifyapp.com/
-- Sole Cognito owner: `zhaohanqing96@gmail.com`; pool `ap-southeast-1_4DchsrDuF`, public client `1ndjces5ihpbn7ce55c99oj8lf`. Account created with invitation suppressed; the owner set the permanent password through a local masked prompt. No password was logged or stored by the deployment tooling.
+- A single Cognito owner account was created with invitation suppressed; the owner set the permanent password through a local masked prompt. No password was logged or stored by the deployment tooling. Pool and public client identifiers were verified against stack outputs.
 
 ## Preservation and maintenance
 
 - Recorded private deployment/configuration recovery snapshots outside both repositories.
 - Set Lambda concurrency to zero, waited beyond its previous timeout, and verified an existing legacy presigned PUT returned `403 AccessDenied` after installing an explicit bucket deny.
 - The permanent template retains the legacy `question-images/*` / `answer-images/*` PUT deny, so those grants cannot become usable again during policy updates.
-- Created and verified an `AVAILABLE` DynamoDB backup: `flashcard-pre-security-20260920T060414Z`.
+- Created and verified an `AVAILABLE` DynamoDB backup; its name and ARN are recorded privately.
 - Frozen inventory: **two records, no current media objects**. Both records contained `entity_type`. Media migration dry run: one page, zero images, zero errors; no data migration required.
 - After deployment, both original records were unchanged in a strongly consistent DynamoDB read.
 - Restored Lambda reserved concurrency to **5** after the secured backend and frontend release were ready.
