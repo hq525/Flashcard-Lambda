@@ -40,6 +40,13 @@ func TestPrivateReadURLExpiresAndCannotChangeResponseType(t *testing.T) {
 	if u.Query().Get("X-Amz-Expires") != "300" || u.Query().Get("response-content-type") != "image/jpeg" || u.Query().Get("response-cache-control") != "private, max-age=60, must-revalidate" {
 		t.Fatalf("unsafe signed read parameters: %v", u.Query())
 	}
+	webpURL, err := store.ReadURL(context.Background(), "images/e3d4a94b-f0e9-46af-a2c0-2c02850b539a.webp")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if u, _ := url.Parse(webpURL); u.Query().Get("response-content-type") != "image/webp" {
+		t.Fatalf("webp read type = %q", u.Query().Get("response-content-type"))
+	}
 	if _, err := store.ReadURL(context.Background(), "https://elsewhere.s3.amazonaws.com/a.png"); err == nil {
 		t.Fatal("arbitrary URL accepted")
 	}

@@ -1,6 +1,7 @@
-# Used by `sam build` (BuildMethod: makefile in template.yaml).
+# Used by `sam build` (BuildMethod: makefile in template.yaml). nodynamic keeps
+# the WebP encoder on its embedded build instead of loading a system libwebp.
 build-FlashcardFunction:
-	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -o $(ARTIFACTS_DIR)/bootstrap ./cmd/lambda
+	GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -tags nodynamic -o $(ARTIFACTS_DIR)/bootstrap ./cmd/lambda
 
 # Authenticated loopback dev server, loading resource/auth settings from .env.
 run:

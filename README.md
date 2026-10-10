@@ -116,7 +116,7 @@ Image creation uses raw bytes:
 - `POST /card-question-image?cardId=<id>&sequenceNumber=1`
 - `POST /card-answer-section-image?cardAnswerSectionId=<id>&sequenceNumber=1`
 
-Send `Content-Type: image/png`, `image/jpeg`, `image/gif`, or `image/webp`. Input is limited to **4 MiB**, dimensions to 8192 per axis and 16 million pixels total. The server decodes and re-encodes each image as JPEG or static PNG, removing metadata and trailing content. Animation and EXIF orientation metadata are not preserved. Normalized output is limited to 10 MiB. An atomic UTC-day budget permits 100 uploads and 100 MiB of normalized data; failed storage attempts may consume budget. Exceeding the budget returns `429`.
+Send `Content-Type: image/png`, `image/jpeg`, `image/gif`, or `image/webp`. Input is limited to **4 MiB**, dimensions to 8192 per axis and 16 million pixels total. The server decodes and re-encodes each image, removing metadata and trailing content: JPEG stays JPEG; PNG, GIF and WebP are stored as lossless WebP (pixel-identical to the decoded upload), or as PNG above 8 megapixels, where lossless WebP would not fit in Lambda memory. Animation and EXIF orientation metadata are not preserved. Normalized output is limited to 10 MiB. An atomic UTC-day budget permits 100 uploads and 100 MiB of normalized data; failed storage attempts may consume budget. Exceeding the budget returns `429`.
 
 Image DTOs contain a five-minute signed `imageURL`, never a storage key. Image downloads permit only short browser caching (`private, max-age=60, must-revalidate`); API JSON remains `no-store`. Signed response headers apply this policy to existing managed images too, without rewriting their metadata. Image PUT accepts only `sequenceNumber`; client URLs cannot select an S3 object. Unmigrated legacy images return an empty URL and cannot be deleted until migrated. `GET /presigned-url` returns `410`; old clients must reload the updated frontend.
 
@@ -153,7 +153,7 @@ Use Go **1.26.8 or newer**. Tests use mocks and need no AWS credentials. Running
 | Variable | Meaning |
 |---|---|
 | `DYNAMODB_TABLE` | DynamoDB table name |
-| `S3_BUCKET` | Private bucket for `images/<image-id>.png` or `.jpg` |
+| `S3_BUCKET` | Private bucket for `images/<image-id>.webp`, `.png` or `.jpg` |
 | `AUTH_ISSUER` | Cognito user-pool issuer, not the hosted login domain |
 | `AUTH_CLIENT_ID` | Public Cognito app client ID |
 | `ALLOWED_ORIGIN` | Exact frontend origin, without trailing slash |

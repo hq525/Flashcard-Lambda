@@ -57,7 +57,7 @@ func TestUploadValidatesBytesAndCreatesOnlyServerBoundImage(t *testing.T) {
 	objects := &testutil.FakeImageStore{PutFn: func(_ context.Context, key string, data []byte, mime string) error {
 		savedKey = key
 		savedBody = data
-		if mime != "image/png" {
+		if mime != "image/webp" {
 			t.Fatal(mime)
 		}
 		return nil

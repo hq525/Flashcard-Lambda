@@ -24,7 +24,7 @@ import (
 
 const imageID = "8c47d801-dd96-449c-8b47-7fe3f7fb917e"
 const legacyURL = "https://legacy-bucket.s3.amazonaws.com/question-images/original.png"
-const targetKey = "images/8c47d801-dd96-449c-8b47-7fe3f7fb917e.png"
+const targetKey = "images/8c47d801-dd96-449c-8b47-7fe3f7fb917e.webp"
 
 func imageRecord() map[string]ddbtypes.AttributeValue {
 	return map[string]ddbtypes.AttributeValue{
@@ -124,7 +124,7 @@ func (o *migrationObjects) GetObject(_ context.Context, input *s3.GetObjectInput
 }
 func (o *migrationObjects) Put(_ context.Context, key string, data []byte, contentType string) error {
 	o.puts++
-	if key != targetKey || contentType != "image/png" {
+	if key != targetKey || contentType != "image/webp" {
 		o.t.Errorf("unsafe target: %q %q", key, contentType)
 	}
 	if o.stored != nil {
