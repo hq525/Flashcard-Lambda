@@ -14,6 +14,7 @@ require (
 	github.com/aws/smithy-go v1.25.1
 	github.com/awslabs/aws-lambda-go-api-proxy v0.16.2
 	github.com/coreos/go-oidc/v3 v3.21.0
+	github.com/gen2brain/webp v0.6.4
 	github.com/google/uuid v1.6.0
 	github.com/open-spaced-repetition/go-fsrs/v4 v4.0.0
 	golang.org/x/image v0.46.0
@@ -37,6 +38,7 @@ require (
 	github.com/aws/aws-sdk-go-v2/service/sso v1.24.8 // indirect
 	github.com/aws/aws-sdk-go-v2/service/ssooidc v1.28.7 // indirect
 	github.com/aws/aws-sdk-go-v2/service/sts v1.33.3 // indirect
+	github.com/ebitengine/purego v0.10.1 // indirect
 	github.com/go-jose/go-jose/v4 v4.1.4 // indirect
 	github.com/go-playground/locales v0.14.1 // indirect
 	github.com/go-playground/universal-translator v0.18.1 // indirect

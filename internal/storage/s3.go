@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"context"
 	"errors"
-	"path"
 	"time"
 
 	"github.com/aws/aws-sdk-go-v2/aws"
@@ -35,7 +34,7 @@ func (s *S3ImageStore) Put(ctx context.Context, key string, data []byte, content
 	if len(data) == 0 || len(data) > MaxStoredImageBytes {
 		return ErrImageTooLarge
 	}
-	if (path.Ext(key) == ".jpg" && contentType != "image/jpeg") || (path.Ext(key) == ".png" && contentType != "image/png") {
+	if storedContentType(key) != contentType {
 		return ErrInvalidImage
 	}
 	_, err := s.client.PutObject(ctx, &s3.PutObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), Body: bytes.NewReader(data), ContentType: aws.String(contentType), CacheControl: aws.String(imageCacheControl), ContentDisposition: aws.String("inline"), ServerSideEncryption: types.ServerSideEncryptionAes256, IfNoneMatch: aws.String("*")})
@@ -46,11 +45,7 @@ func (s *S3ImageStore) ReadURL(ctx context.Context, key string) (string, error) 
 	if err := validateManagedKey(key); err != nil {
 		return "", err
 	}
-	contentType := "image/png"
-	if path.Ext(key) == ".jpg" {
-		contentType = "image/jpeg"
-	}
-	result, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), ResponseContentType: aws.String(contentType), ResponseContentDisposition: aws.String("inline"), ResponseCacheControl: aws.String(imageCacheControl)}, s3.WithPresignExpires(readURLExpiry))
+	result, err := s.presign.PresignGetObject(ctx, &s3.GetObjectInput{Bucket: aws.String(s.bucket), Key: aws.String(key), ResponseContentType: aws.String(storedContentType(key)), ResponseContentDisposition: aws.String("inline"), ResponseCacheControl: aws.String(imageCacheControl)}, s3.WithPresignExpires(readURLExpiry))
 	if err != nil {
 		return "", err
 	}

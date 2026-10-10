@@ -137,7 +137,7 @@ Resources:
       Architectures: [arm64]
       CodeUri: .
       Timeout: 30
-      MemorySize: 512
+      MemorySize: 1024
       # Bound concurrent work; this does not cap S3 storage or overall billing.
       ReservedConcurrentExecutions: 5
       Environment:
